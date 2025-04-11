@@ -40,7 +40,7 @@ export default function EstadoCuentaApp() {
       const data = XLSX.utils.sheet_to_json(ws, { defval: "" });
       const columnasValidas = data.map((row) => ({
         fecha: row["FECHA"] || "",
-        nroFactura: row["N° FACTURA"] || "",
+        nroFactura: row["FACTURA"] || "",
         importe: parseFloat(row["IMPORTE"] || 0),
         cliente: row["CLIENTE"] || "",
         condicion: row["CONDICION"] || "",
