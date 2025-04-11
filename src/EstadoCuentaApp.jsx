@@ -149,25 +149,33 @@ export default function EstadoCuentaApp() {
         <Button onClick={handleAgregarFactura}>Agregar Factura</Button>
       </div>
 
-      {clienteFiltro && (
+      {facturasFiltradas.length > 0 && (
         <div className="mb-6">
-          <p className="text-lg font-semibold">
-            Cliente: <span className="font-normal">{clienteFiltro}</span>
-          </p>
-          <p className="text-lg font-semibold text-red-600">
-            Total Impago: ${totalImpago.toFixed(2)}
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mt-4">
-            {Object.entries(resumenPorEstado).map(([estado, total]) => (
-              <div
-                key={estado}
-                className={`text-sm font-medium ${getEstadoColor(estado)}`}
-              >
-                {estado}: ${total.toFixed(2)}
+          {clienteFiltro && (
+            <>
+              <p className="text-lg font-semibold">
+                Cliente: <span className="font-normal">{clienteFiltro}</span>
+              </p>
+              <p className="text-lg font-semibold text-red-600">
+                Total Impago: ${totalImpago.toFixed(2)}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mt-4">
+                {Object.entries(resumenPorEstado).map(([estado, total]) => (
+                  <div
+                    key={estado}
+                    className={`text-sm font-medium ${getEstadoColor(estado)}`}
+                  >
+                    {estado}: ${total.toFixed(2)}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
+      )}
+
+      {facturasFiltradas.length === 0 && (
+        <p className="text-center text-gray-500">No hay facturas para mostrar.</p>
       )}
 
       <div className="grid gap-4">
