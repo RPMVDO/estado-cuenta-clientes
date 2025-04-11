@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
-const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbwU1a6secfi1getFByIQPMZ9TY-CdhuJ6vXaS3LX-zpZ05Mft-Sz0t8A0ljc5sfB3HUAw/exec";
+const Input = (props) => <input {...props} className="border p-2 rounded w-full" />;
+const Button = (props) => <button {...props} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded" />;
+const Card = (props) => <div className="bg-white shadow rounded-lg border border-gray-200">{props.children}</div>;
+const CardContent = (props) => <div className="p-4">{props.children}</div>;
+
+const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbwU1a6secfi1getFByIQPMZ9TY-CdhuJ6vXaS3LX-zpZ05Mft-Sz0t8A0ljc5sfB3HUAw/exec"; // reemplazá con tu URL
 
 export default function EstadoCuentaApp() {
   const [facturas, setFacturas] = useState([]);
