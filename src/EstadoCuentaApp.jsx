@@ -25,7 +25,19 @@ export default function EstadoCuentaApp() {
   useEffect(() => {
     fetch(GOOGLE_SHEET_API_URL)
       .then((res) => res.json())
-      .then((data) => setFacturas(data))
+      .then((data) => {
+        const adaptadas = data.map((row) => ({
+          fecha: row["FECHA"] || "",
+          nroFactura: row["FACTURA"] || "",
+          importe: parseFloat((row["IMPORTE"] || "0").toString().replace(/[^0-9.-]+/g, "")),
+          cliente: row["CLIENTE"] || "",
+          condicion: row["CONDICION"] || "",
+          recibo: row["RECIBO"] || "",
+          vencimiento: row["VENCIMIENTO"] || "",
+          estado: row["DEBE"] || ""
+        }));
+        setFacturas(adaptadas);
+      })
       .catch((err) => console.error("Error cargando facturas:", err));
   }, []);
 
