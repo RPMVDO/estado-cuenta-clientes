@@ -6,7 +6,7 @@ const Button = (props) => <button {...props} className="bg-blue-600 hover:bg-blu
 const Card = (props) => <div className="bg-white shadow rounded-lg border border-gray-200">{props.children}</div>;
 const CardContent = (props) => <div className="p-4">{props.children}</div>;
 
-const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzxYNLUYa8Q1dstm-WP7r5hUIOAeOW_KAGI8x4WbzSRJ5AVoCODTJs7Fp14xFekowigdA/exec"; // reemplazá con tu URL
+const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzxYNLUYa8Q1dstm-WP7r5hUIOAeOW_KAGI8x4WbzSRJ5AVoCODTJs7Fp14xFekowigdA/exec"; // nueva URL actualizada
 
 export default function EstadoCuentaApp() {
   const [facturas, setFacturas] = useState([]);
