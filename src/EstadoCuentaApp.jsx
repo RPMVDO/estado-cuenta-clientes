@@ -14,7 +14,6 @@ export default function EstadoCuentaERP() {
     fetch(GOOGLE_SHEET_API_URL)
       .then((res) => res.json())
       .then((data) => {
-        console.log("Datos recibidos:", data);
         const hoy = new Date();
         const adaptadas = data.map((row) => {
           const cliente = typeof row["CLIENTE"] === "string" ? row["CLIENTE"] : "";
@@ -47,7 +46,6 @@ export default function EstadoCuentaERP() {
   }, []);
 
   const filtrarFacturas = () => {
-    const hoy = new Date();
     return facturas.filter((f) => {
       const cliente = typeof f.cliente === "string" ? f.cliente : "";
       const cumpleCliente = cliente.toLowerCase().includes(clienteFiltro.toLowerCase());
@@ -73,6 +71,22 @@ export default function EstadoCuentaERP() {
     if (estado === "IMPAGO") return "text-red-600";
     return "text-gray-600";
   };
+
+  const facturasFiltradas = filtrarFacturas();
+  const totalPorEstado = facturasFiltradas.reduce(
+    (acc, f) => {
+      acc[f.estado] = (acc[f.estado] || 0) + f.importe;
+      return acc;
+    },
+    {}
+  );
+
+  const agrupadasPorCliente = clienteFiltro
+    ? {
+        pagadas: facturasFiltradas.filter((f) => f.estado === "PAGADO"),
+        adeudadas: facturasFiltradas.filter((f) => f.estado !== "PAGADO")
+      }
+    : null;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -100,40 +114,59 @@ export default function EstadoCuentaERP() {
         ))}
       </div>
 
-      {filtrarFacturas().length === 0 ? (
-        <p className="text-gray-500 text-center">No hay facturas para mostrar.</p>
+      <div className="mb-6">
+        {Object.entries(totalPorEstado).map(([estado, total]) => (
+          <div key={estado} className={`font-medium ${getEstadoColor(estado)}`}>
+            {estado}: ${total.toFixed(2)}
+          </div>
+        ))}
+      </div>
+
+      {agrupadasPorCliente ? (
+        <>
+          <h2 className="text-xl font-semibold mb-2">Pagadas</h2>
+          <TablaFacturas data={agrupadasPorCliente.pagadas} getEstadoColor={getEstadoColor} />
+          <h2 className="text-xl font-semibold mt-6 mb-2">Impagas</h2>
+          <TablaFacturas data={agrupadasPorCliente.adeudadas} getEstadoColor={getEstadoColor} />
+        </>
       ) : (
-        <div className="overflow-auto">
-          <table className="min-w-full text-sm border">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="p-2 border">Fecha</th>
-                <th className="p-2 border">Factura</th>
-                <th className="p-2 border">Cliente</th>
-                <th className="p-2 border">Importe</th>
-                <th className="p-2 border">Condición</th>
-                <th className="p-2 border">Vencimiento</th>
-                <th className="p-2 border">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrarFacturas().map((f, idx) => (
-                <tr key={idx} className="odd:bg-white even:bg-gray-50">
-                  <td className="p-2 border">{f.fecha}</td>
-                  <td className="p-2 border">{f.nroFactura}</td>
-                  <td className="p-2 border">{f.cliente}</td>
-                  <td className="p-2 border">${f.importe.toFixed(2)}</td>
-                  <td className="p-2 border">{f.condicion}</td>
-                  <td className="p-2 border">{f.vencimiento}</td>
-                  <td className={`p-2 border font-semibold ${getEstadoColor(f.estado)}`}>
-                    {f.estado || "-"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <TablaFacturas data={facturasFiltradas} getEstadoColor={getEstadoColor} />
       )}
+    </div>
+  );
+}
+
+function TablaFacturas({ data, getEstadoColor }) {
+  return (
+    <div className="overflow-auto">
+      <table className="min-w-full text-sm border">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="p-2 border">Fecha</th>
+            <th className="p-2 border">Factura</th>
+            <th className="p-2 border">Cliente</th>
+            <th className="p-2 border">Importe</th>
+            <th className="p-2 border">Condición</th>
+            <th className="p-2 border">Vencimiento</th>
+            <th className="p-2 border">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((f, idx) => (
+            <tr key={idx} className="odd:bg-white even:bg-gray-50">
+              <td className="p-2 border">{f.fecha}</td>
+              <td className="p-2 border">{f.nroFactura}</td>
+              <td className="p-2 border">{f.cliente}</td>
+              <td className="p-2 border">${f.importe.toFixed(2)}</td>
+              <td className="p-2 border">{f.condicion}</td>
+              <td className="p-2 border">{f.vencimiento}</td>
+              <td className={`p-2 border font-semibold ${getEstadoColor(f.estado)}`}>
+                {f.estado || "-"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
