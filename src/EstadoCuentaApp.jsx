@@ -1,26 +1,14 @@
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 
-const Input = (props) => <input {...props} className="border p-2 rounded w-full" />;
-const Button = (props) => <button {...props} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded" />;
-const Card = (props) => <div className="bg-white shadow rounded-lg border border-gray-200">{props.children}</div>;
-const CardContent = (props) => <div className="p-4">{props.children}</div>;
+const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzxYNLUYa8Q1dstm-WP7r5hUIOAeOW_KAGI8x4WbzSRJ5AVoCODTJs7Fp14xFekowigdA/exec";
 
-const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzxYNLUYa8Q1dstm-WP7r5hUIOAeOW_KAGI8x4WbzSRJ5AVoCODTJs7Fp14xFekowigdA/exec"; // nueva URL actualizada
+const TABS = ["Todas", "> 30 días", "< 30 días", "Pagadas", "Adeudadas"];
 
-export default function EstadoCuentaApp() {
+export default function EstadoCuentaERP() {
   const [facturas, setFacturas] = useState([]);
   const [clienteFiltro, setClienteFiltro] = useState("");
-  const [nuevaFactura, setNuevaFactura] = useState({
-    fecha: "",
-    nroFactura: "",
-    importe: "",
-    cliente: "",
-    condicion: "",
-    recibo: "",
-    vencimiento: "",
-    estado: ""
-  });
+  const [tabActiva, setTabActiva] = useState("Todas");
 
   useEffect(() => {
     fetch(GOOGLE_SHEET_API_URL)
@@ -37,170 +25,97 @@ export default function EstadoCuentaApp() {
           estado: row["DEBE"] || ""
         }));
         setFacturas(adaptadas);
-      })
-      .catch((err) => console.error("Error cargando facturas:", err));
+      });
   }, []);
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const bstr = evt.target.result;
-      const wb = XLSX.read(bstr, { type: "binary" });
-      const wsname = wb.SheetNames[0];
-      const ws = wb.Sheets[wsname];
-      const data = XLSX.utils.sheet_to_json(ws, { defval: "" });
-      const columnasValidas = data.map((row) => ({
-        fecha: row["FECHA"] || "",
-        nroFactura: row["FACTURA"] || "",
-        importe: parseFloat(row["IMPORTE"] || 0),
-        cliente: row["CLIENTE"] || "",
-        condicion: row["CONDICION"] || "",
-        recibo: row["RECIBO"] || "",
-        vencimiento: row["VENCIMIENTO"] || "",
-        estado: row["DEBE"] || ""
-      }));
-      columnasValidas.forEach((factura) => {
-        fetch(GOOGLE_SHEET_API_URL, {
-          method: "POST",
-          body: JSON.stringify(factura),
-          headers: { "Content-Type": "application/json" }
-        });
-      });
-      setFacturas((prev) => [...prev, ...columnasValidas]);
-    };
-    reader.readAsBinaryString(file);
-  };
+  const filtrarFacturas = () => {
+    const hoy = new Date();
+    return facturas.filter((f) => {
+      const cumpleCliente = f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase());
+      const fechaFactura = new Date(f.fecha);
+      const dias = (hoy - fechaFactura) / (1000 * 60 * 60 * 24);
 
-  const facturasFiltradas = facturas.filter((f) =>
-    f.cliente?.toLowerCase().includes(clienteFiltro.toLowerCase())
-  );
-
-  const resumenPorEstado = facturasFiltradas.reduce((acc, f) => {
-    const estado = f.estado || "SIN ESTADO";
-    if (!acc[estado]) acc[estado] = 0;
-    acc[estado] += parseFloat(f.importe) || 0;
-    return acc;
-  }, {});
-
-  const totalImpago = Object.entries(resumenPorEstado)
-    .filter(([estado]) => estado !== "PAGADO")
-    .reduce((sum, [, val]) => sum + val, 0);
-
-  const getEstadoColor = (estado) => {
-    if (estado === "PAGADO") return "text-green-600";
-    if (estado === "DIFICIL") return "text-yellow-600";
-    if (["DEBE", "IMPAGO"].includes(estado)) return "text-red-600";
-    return "text-gray-600";
-  };
-
-  const handleAgregarFactura = () => {
-    const nueva = {
-      ...nuevaFactura,
-      importe: parseFloat(nuevaFactura.importe || 0)
-    };
-    fetch(GOOGLE_SHEET_API_URL, {
-      method: "POST",
-      body: JSON.stringify(nueva),
-      headers: { "Content-Type": "application/json" }
-    })
-      .then(() => setFacturas((prev) => [...prev, nueva]))
-      .catch((err) => console.error("Error al guardar:", err));
-
-    setNuevaFactura({
-      fecha: "",
-      nroFactura: "",
-      importe: "",
-      cliente: "",
-      condicion: "",
-      recibo: "",
-      vencimiento: "",
-      estado: ""
+      switch (tabActiva) {
+        case "> 30 días":
+          return cumpleCliente && dias > 30;
+        case "< 30 días":
+          return cumpleCliente && dias <= 30;
+        case "Pagadas":
+          return cumpleCliente && f.estado?.toUpperCase() === "PAGADO";
+        case "Adeudadas":
+          return cumpleCliente && ["DEBE", "IMPAGO"].includes(f.estado?.toUpperCase());
+        default:
+          return cumpleCliente;
+      }
     });
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Estado de Cuenta de Clientes</h1>
+    <div className="p-6 max-w-6xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">Estado de Cuenta ERP</h1>
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-        <Input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} />
-        <Input
-          placeholder="Buscar cliente..."
-          value={clienteFiltro}
-          onChange={(e) => setClienteFiltro(e.target.value)}
-        />
-      </div>
+      <input
+        type="text"
+        placeholder="Buscar cliente..."
+        className="border px-4 py-2 rounded w-full mb-4"
+        value={clienteFiltro}
+        onChange={(e) => setClienteFiltro(e.target.value)}
+      />
 
-      <div className="mb-6 space-y-2">
-        <h2 className="text-xl font-semibold">Agregar Factura Manualmente</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {Object.keys(nuevaFactura).map((campo) => (
-            <Input
-              key={campo}
-              placeholder={campo}
-              value={nuevaFactura[campo]}
-              onChange={(e) =>
-                setNuevaFactura({ ...nuevaFactura, [campo]: e.target.value })
-              }
-            />
-          ))}
-        </div>
-        <Button onClick={handleAgregarFactura}>Agregar Factura</Button>
-      </div>
-
-      {facturasFiltradas.length > 0 && (
-        <div className="mb-6">
-          {clienteFiltro && (
-            <>
-              <p className="text-lg font-semibold">
-                Cliente: <span className="font-normal">{clienteFiltro}</span>
-              </p>
-              <p className="text-lg font-semibold text-red-600">
-                Total Impago: ${totalImpago.toFixed(2)}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mt-4">
-                {Object.entries(resumenPorEstado).map(([estado, total]) => (
-                  <div
-                    key={estado}
-                    className={`text-sm font-medium ${getEstadoColor(estado)}`}
-                  >
-                    {estado}: ${total.toFixed(2)}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {facturasFiltradas.length === 0 && (
-        <p className="text-center text-gray-500">No hay facturas para mostrar.</p>
-      )}
-
-      <div className="grid gap-4">
-        {facturasFiltradas.map((factura, idx) => (
-          <Card key={idx} className="shadow border">
-            <CardContent className="p-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-                <div>
-                  <span className="font-medium">Fecha:</span> {factura.fecha}
-                </div>
-                <div>
-                  <span className="font-medium">Factura:</span> {factura.nroFactura}
-                </div>
-                <div>
-                  <span className="font-medium">Importe:</span> ${factura.importe}
-                </div>
-                <div>
-                  <span className="font-medium">Estado:</span>{" "}
-                  <span className={getEstadoColor(factura.estado)}>{factura.estado}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            className={`px-4 py-2 rounded ${
+              tabActiva === tab ? "bg-blue-600 text-white" : "bg-gray-200"
+            }`}
+            onClick={() => setTabActiva(tab)}
+          >
+            {tab}
+          </button>
         ))}
       </div>
+
+      {filtrarFacturas().length === 0 ? (
+        <p className="text-gray-500 text-center">No hay facturas para mostrar.</p>
+      ) : (
+        <div className="overflow-auto">
+          <table className="min-w-full text-sm border">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2 border">Fecha</th>
+                <th className="p-2 border">Factura</th>
+                <th className="p-2 border">Cliente</th>
+                <th className="p-2 border">Importe</th>
+                <th className="p-2 border">Condición</th>
+                <th className="p-2 border">Vencimiento</th>
+                <th className="p-2 border">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtrarFacturas().map((f, idx) => (
+                <tr key={idx} className="odd:bg-white even:bg-gray-50">
+                  <td className="p-2 border">{f.fecha}</td>
+                  <td className="p-2 border">{f.nroFactura}</td>
+                  <td className="p-2 border">{f.cliente}</td>
+                  <td className="p-2 border">${f.importe.toFixed(2)}</td>
+                  <td className="p-2 border">{f.condicion}</td>
+                  <td className="p-2 border">{f.vencimiento}</td>
+                  <td className={`p-2 border font-semibold ${
+                    f.estado?.toUpperCase() === "PAGADO"
+                      ? "text-green-600"
+                      : ["DEBE", "IMPAGO"].includes(f.estado?.toUpperCase())
+                      ? "text-red-600"
+                      : "text-gray-600"
+                  }`}>
+                    {f.estado || "-"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
