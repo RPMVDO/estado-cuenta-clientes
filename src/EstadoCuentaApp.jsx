@@ -31,7 +31,7 @@ export default function EstadoCuentaERP() {
       .then((res) => res.json())
       .then((data) => {
         const hoy = new Date();
-        const adaptadas = data.map((row) => {
+        const adaptadas = data.map((row, index) => {
           const cliente = typeof row["CLIENTE"] === "string" ? row["CLIENTE"] : "";
           const fechaRaw = row["FECHA"] || "";
           const vencimientoRaw = row["VENCIMIENTO"] || "";
@@ -43,6 +43,7 @@ export default function EstadoCuentaERP() {
           else if (debe === "NO") estado = "PENDIENTE";
 
           return {
+            id: index,
             fecha: formatearFecha(fechaRaw),
             nroFactura: row["FACTURA"] || "",
             importe: parseFloat((row["IMPORTE"] || "0").toString().replace(/[^0-9.-]+/g, "")),
@@ -58,6 +59,19 @@ export default function EstadoCuentaERP() {
         setFacturas(adaptadas);
       });
   }, []);
+
+  const marcarComoPagada = (factura) => {
+    const nuevaFactura = { ...factura, estado: "PAGADO", debe: "" };
+    fetch(GOOGLE_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nuevaFactura)
+    }).then(() => {
+      setFacturas((prev) =>
+        prev.map((f) => (f.id === factura.id ? { ...f, estado: "PAGADO" } : f))
+      );
+    });
+  };
 
   const filtrarFacturas = () => {
     return facturas.filter((f) => {
@@ -158,15 +172,15 @@ export default function EstadoCuentaERP() {
         {agrupadasPorCliente ? (
           <>
             <Section title="Facturas Pagadas">
-              <TablaFacturas data={agrupadasPorCliente.pagadas} getEstadoColor={getEstadoColor} />
+              <TablaFacturas data={agrupadasPorCliente.pagadas} getEstadoColor={getEstadoColor} onMarcarPagada={marcarComoPagada} />
             </Section>
             <Section title="Facturas Adeudadas">
-              <TablaFacturas data={agrupadasPorCliente.adeudadas} getEstadoColor={getEstadoColor} />
+              <TablaFacturas data={agrupadasPorCliente.adeudadas} getEstadoColor={getEstadoColor} onMarcarPagada={marcarComoPagada} />
             </Section>
           </>
         ) : (
           <Section>
-            <TablaFacturas data={facturasFiltradas} getEstadoColor={getEstadoColor} />
+            <TablaFacturas data={facturasFiltradas} getEstadoColor={getEstadoColor} onMarcarPagada={marcarComoPagada} />
           </Section>
         )}
       </main>
@@ -183,7 +197,7 @@ function Section({ title, children }) {
   );
 }
 
-function TablaFacturas({ data, getEstadoColor }) {
+function TablaFacturas({ data, getEstadoColor, onMarcarPagada }) {
   return (
     <div className="overflow-x-auto bg-white rounded-md shadow-md">
       <table className="min-w-full text-sm">
@@ -196,6 +210,7 @@ function TablaFacturas({ data, getEstadoColor }) {
             <th className="px-4 py-3 text-left">Condición</th>
             <th className="px-4 py-3 text-left">Vencimiento</th>
             <th className="px-4 py-3 text-left">Estado</th>
+            <th className="px-4 py-3 text-left">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -208,6 +223,16 @@ function TablaFacturas({ data, getEstadoColor }) {
               <td className="px-4 py-2 whitespace-nowrap">{f.condicion}</td>
               <td className="px-4 py-2 whitespace-nowrap">{f.vencimiento}</td>
               <td className={`px-4 py-2 whitespace-nowrap font-semibold ${getEstadoColor(f.estado)}`}>{f.estado || "-"}</td>
+              <td className="px-4 py-2 whitespace-nowrap">
+                {f.estado !== "PAGADO" && (
+                  <button
+                    onClick={() => onMarcarPagada(f)}
+                    className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-xs"
+                  >
+                    Marcar como pagada
+                  </button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
