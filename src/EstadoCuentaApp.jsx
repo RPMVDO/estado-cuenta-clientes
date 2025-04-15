@@ -15,16 +15,19 @@ export default function EstadoCuentaERP() {
       .then((res) => res.json())
       .then((data) => {
         console.log("Datos recibidos:", data);
-        const adaptadas = data.map((row) => ({
-          fecha: row["FECHA"] || "",
-          nroFactura: row["FACTURA"] || "",
-          importe: parseFloat((row["IMPORTE"] || "0").toString().replace(/[^0-9.-]+/g, "")),
-          cliente: row["CLIENTE"] || "",
-          condicion: row["CONDICION"] || "",
-          recibo: row["RECIBO"] || "",
-          vencimiento: row["VENCIMIENTO"] || "",
-          estado: row["DEBE"] || ""
-        }));
+        const adaptadas = data.map((row) => {
+          const cliente = typeof row["CLIENTE"] === "string" ? row["CLIENTE"] : "";
+          return {
+            fecha: row["FECHA"] || "",
+            nroFactura: row["FACTURA"] || "",
+            importe: parseFloat((row["IMPORTE"] || "0").toString().replace(/[^0-9.-]+/g, "")),
+            cliente,
+            condicion: row["CONDICION"] || "",
+            recibo: row["RECIBO"] || "",
+            vencimiento: row["VENCIMIENTO"] || "",
+            estado: row["DEBE"] || ""
+          };
+        });
         setFacturas(adaptadas);
       });
   }, []);
@@ -32,7 +35,8 @@ export default function EstadoCuentaERP() {
   const filtrarFacturas = () => {
     const hoy = new Date();
     return facturas.filter((f) => {
-      const cumpleCliente = (f.cliente || "").toLowerCase().includes(clienteFiltro.toLowerCase());
+      const cliente = typeof f.cliente === "string" ? f.cliente : "";
+      const cumpleCliente = cliente.toLowerCase().includes(clienteFiltro.toLowerCase());
       const fechaFactura = new Date(f.fecha);
       const dias = (hoy - fechaFactura) / (1000 * 60 * 60 * 24);
 
