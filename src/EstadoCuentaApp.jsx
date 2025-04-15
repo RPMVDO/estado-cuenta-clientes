@@ -32,7 +32,8 @@ export default function EstadoCuentaERP() {
             recibo: row["RECIBO"] || "",
             vencimiento: row["VENCIMIENTO"] || "",
             estado,
-            dias
+            dias,
+            debe
           };
         });
         setFacturas(adaptadas);
@@ -53,7 +54,7 @@ export default function EstadoCuentaERP() {
         case "Pagadas":
           return cumpleCliente && f.estado === "PAGADO";
         case "Adeudadas":
-          return cumpleCliente && f.estado === "IMPAGO";
+          return cumpleCliente && f.debe === "SI";
         default:
           return cumpleCliente;
       }
