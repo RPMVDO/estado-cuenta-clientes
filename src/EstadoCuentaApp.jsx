@@ -3,7 +3,13 @@ import * as XLSX from "xlsx";
 
 const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbykCtKQrjZYzGXiIA6kLIeWs-OCS3C6JwT932CIWylVT93N9JWtYflbcO1Z96eyC29AqQ/exec";
 
-const TABS = ["Todas", "> 30 días", "< 30 días", "Pagadas", "Adeudadas"];
+const TABS = [
+  { name: "Todas", icon: "📋" },
+  { name: "> 30 días", icon: "⏰" },
+  { name: "< 30 días", icon: "🗓️" },
+  { name: "Pagadas", icon: "✅" },
+  { name: "Adeudadas", icon: "⚠️" }
+];
 
 export default function EstadoCuentaERP() {
   const [facturas, setFacturas] = useState([]);
@@ -22,11 +28,8 @@ export default function EstadoCuentaERP() {
           const debe = row["DEBE"]?.toUpperCase();
 
           let estado = "PAGADO";
-          if (debe === "SI") {
-            estado = "IMPAGO";
-          } else if (debe === "NO") {
-            estado = "PENDIENTE";
-          }
+          if (debe === "SI") estado = "IMPAGO";
+          else if (debe === "NO") estado = "PENDIENTE";
 
           return {
             fecha,
@@ -73,35 +76,36 @@ export default function EstadoCuentaERP() {
   };
 
   const facturasFiltradas = filtrarFacturas();
-  const totalPorEstado = facturasFiltradas.reduce(
-    (acc, f) => {
-      acc[f.estado] = (acc[f.estado] || 0) + f.importe;
-      return acc;
-    },
-    {}
-  );
+  const totalPorEstado = facturasFiltradas.reduce((acc, f) => {
+    acc[f.estado] = (acc[f.estado] || 0) + f.importe;
+    return acc;
+  }, {});
 
   const agrupadasPorCliente = clienteFiltro
     ? {
-        pagadas: facturas.filter((f) => f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase()) && f.estado === "PAGADO"),
-        adeudadas: facturas.filter((f) => f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase()) && (f.estado === "IMPAGO" || f.estado === "PENDIENTE"))
+        pagadas: facturas.filter(
+          (f) => f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase()) && f.estado === "PAGADO"
+        ),
+        adeudadas: facturas.filter(
+          (f) => f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase()) && (f.estado === "IMPAGO" || f.estado === "PENDIENTE")
+        )
       }
     : null;
 
   return (
     <div className="flex bg-gray-100 min-h-screen font-sans">
       <aside className="w-64 bg-white border-r shadow-md p-6">
-        <h2 className="text-xl font-semibold text-blue-700 mb-6">🧾 ERP Panel</h2>
+        <h2 className="text-xl font-bold text-blue-700 mb-6">📊 ERP Panel</h2>
         <nav className="space-y-2">
-          {TABS.map((tab) => (
+          {TABS.map(({ name, icon }) => (
             <button
-              key={tab}
-              className={`block w-full text-left px-4 py-2 rounded-md font-medium ${
-                tabActiva === tab ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100 text-gray-700"
+              key={name}
+              className={`block w-full text-left px-4 py-2 rounded-md font-medium flex items-center gap-2 ${
+                tabActiva === name ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100 text-gray-700"
               }`}
-              onClick={() => setTabActiva(tab)}
+              onClick={() => setTabActiva(name)}
             >
-              {tab}
+              <span>{icon}</span> {name}
             </button>
           ))}
         </nav>
