@@ -17,15 +17,13 @@ export default function EstadoCuentaERP() {
   const [clienteFiltro, setClienteFiltro] = useState("");
   const [tabActiva, setTabActiva] = useState("Todas");
 
-  const formatearFecha = (str) => {
-    if (!str) return "";
-    const partes = str.split("/");
-    if (partes.length === 3) return str;
-    const d = new Date(str);
-    if (isNaN(d)) return str;
-    const dd = d.getDate().toString().padStart(2, "0");
-    const mm = (d.getMonth() + 1).toString().padStart(2, "0");
-    const yy = d.getFullYear().toString().slice(-2);
+  const formatearFecha = (fechaStr) => {
+    if (!fechaStr) return "";
+    const fecha = new Date(fechaStr);
+    if (isNaN(fecha)) return fechaStr;
+    const dd = String(fecha.getDate()).padStart(2, "0");
+    const mm = String(fecha.getMonth() + 1).padStart(2, "0");
+    const yy = String(fecha.getFullYear()).slice(-2);
     return `${dd}/${mm}/${yy}`;
   };
 
@@ -71,7 +69,6 @@ export default function EstadoCuentaERP() {
   }, []);
 
   const marcarComoPagada = (factura) => {
-    console.log("🟢 Click en botón Marcar como pagada:", factura);
     const nuevaFactura = { ...factura, estado: "PAGADO", debe: "" };
     fetch(API_PROXY_URL, {
       method: "POST",
@@ -80,7 +77,6 @@ export default function EstadoCuentaERP() {
     })
       .then((res) => res.text())
       .then((res) => {
-        console.log("🔄 Respuesta del servidor:", res);
         setFacturas((prev) =>
           prev.map((f) => (f.id === factura.id ? { ...f, estado: "PAGADO", debe: "" } : f))
         );
