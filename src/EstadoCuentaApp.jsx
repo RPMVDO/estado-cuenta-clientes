@@ -83,8 +83,8 @@ export default function EstadoCuentaERP() {
 
   const agrupadasPorCliente = clienteFiltro
     ? {
-        pagadas: facturasFiltradas.filter((f) => f.estado === "PAGADO"),
-        adeudadas: facturasFiltradas.filter((f) => f.estado !== "PAGADO")
+        pagadas: facturas.filter((f) => f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase()) && f.estado === "PAGADO"),
+        adeudadas: facturas.filter((f) => f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase()) && (f.estado === "IMPAGO" || f.estado === "PENDIENTE"))
       }
     : null;
 
