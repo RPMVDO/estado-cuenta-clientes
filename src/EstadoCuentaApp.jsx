@@ -61,16 +61,21 @@ export default function EstadoCuentaERP() {
   }, []);
 
   const marcarComoPagada = (factura) => {
+    console.log("🟢 Click en botón Marcar como pagada:", factura);
     const nuevaFactura = { ...factura, estado: "PAGADO", debe: "" };
     fetch(GOOGLE_SHEET_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(nuevaFactura)
-    }).then(() => {
-      setFacturas((prev) =>
-        prev.map((f) => (f.id === factura.id ? { ...f, estado: "PAGADO" } : f))
-      );
-    });
+    })
+      .then((res) => res.text())
+      .then((res) => {
+        console.log("🔄 Respuesta del servidor:", res);
+        setFacturas((prev) =>
+          prev.map((f) => (f.id === factura.id ? { ...f, estado: "PAGADO" } : f))
+        );
+      })
+      .catch((err) => console.error("❌ Error al marcar como pagada:", err));
   };
 
   const filtrarFacturas = () => {
