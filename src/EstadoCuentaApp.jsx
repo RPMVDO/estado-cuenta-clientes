@@ -21,11 +21,7 @@ export default function EstadoCuentaERP() {
           const fecha = row["FECHA"] || "";
           const dias = (hoy - new Date(fecha)) / (1000 * 60 * 60 * 24);
           const debe = row["DEBE"]?.toUpperCase();
-          const estado = debe === "SI"
-            ? dias > 30
-              ? "IMPAGO"
-              : "PENDIENTE"
-            : "PAGADO";
+          const estado = debe === "SI" ? "IMPAGO" : "PAGADO";
 
           return {
             fecha,
@@ -35,7 +31,8 @@ export default function EstadoCuentaERP() {
             condicion: row["CONDICION"] || "",
             recibo: row["RECIBO"] || "",
             vencimiento: row["VENCIMIENTO"] || "",
-            estado
+            estado,
+            dias
           };
         });
         setFacturas(adaptadas);
@@ -47,18 +44,16 @@ export default function EstadoCuentaERP() {
     return facturas.filter((f) => {
       const cliente = typeof f.cliente === "string" ? f.cliente : "";
       const cumpleCliente = cliente.toLowerCase().includes(clienteFiltro.toLowerCase());
-      const fechaFactura = new Date(f.fecha);
-      const dias = (hoy - fechaFactura) / (1000 * 60 * 60 * 24);
 
       switch (tabActiva) {
         case "> 30 días":
-          return cumpleCliente && dias > 30;
+          return cumpleCliente && f.dias > 30;
         case "< 30 días":
-          return cumpleCliente && dias <= 30;
+          return cumpleCliente && f.dias <= 30;
         case "Pagadas":
           return cumpleCliente && f.estado === "PAGADO";
         case "Adeudadas":
-          return cumpleCliente && (f.estado === "IMPAGO" || f.estado === "PENDIENTE");
+          return cumpleCliente && f.estado === "IMPAGO";
         default:
           return cumpleCliente;
       }
@@ -119,9 +114,7 @@ export default function EstadoCuentaERP() {
                   <td className={`p-2 border font-semibold ${
                     f.estado === "PAGADO"
                       ? "text-green-600"
-                      : f.estado === "IMPAGO"
-                      ? "text-red-600"
-                      : "text-yellow-600"
+                      : "text-red-600"
                   }`}>
                     {f.estado || "-"}
                   </td>
