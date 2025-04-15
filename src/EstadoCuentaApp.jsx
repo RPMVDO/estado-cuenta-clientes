@@ -21,7 +21,13 @@ export default function EstadoCuentaERP() {
           const fecha = row["FECHA"] || "";
           const dias = (hoy - new Date(fecha)) / (1000 * 60 * 60 * 24);
           const debe = row["DEBE"]?.toUpperCase();
-          const estado = debe === "SI" ? "IMPAGO" : "PAGADO";
+
+          let estado = "PAGADO";
+          if (debe === "SI") {
+            estado = "IMPAGO";
+          } else if (debe === "NO") {
+            estado = "PENDIENTE";
+          }
 
           return {
             fecha,
@@ -54,11 +60,18 @@ export default function EstadoCuentaERP() {
         case "Pagadas":
           return cumpleCliente && f.estado === "PAGADO";
         case "Adeudadas":
-          return cumpleCliente && f.debe === "SI";
+          return cumpleCliente && (f.estado === "IMPAGO" || f.estado === "PENDIENTE");
         default:
           return cumpleCliente;
       }
     });
+  };
+
+  const getEstadoColor = (estado) => {
+    if (estado === "PAGADO") return "text-green-600";
+    if (estado === "PENDIENTE") return "text-yellow-600";
+    if (estado === "IMPAGO") return "text-red-600";
+    return "text-gray-600";
   };
 
   return (
@@ -112,11 +125,7 @@ export default function EstadoCuentaERP() {
                   <td className="p-2 border">${f.importe.toFixed(2)}</td>
                   <td className="p-2 border">{f.condicion}</td>
                   <td className="p-2 border">{f.vencimiento}</td>
-                  <td className={`p-2 border font-semibold ${
-                    f.estado === "PAGADO"
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}>
+                  <td className={`p-2 border font-semibold ${getEstadoColor(f.estado)}`}>
                     {f.estado || "-"}
                   </td>
                 </tr>
