@@ -31,187 +31,128 @@ export default function EstadoCuentaERP() {
     fetch(GOOGLE_SHEET_API_URL)
       .then((res) => res.json())
       .then((data) => {
+        console.log("🚀 Datos recibidos desde Google Sheets:", data);
+
         const hoy = new Date();
         const adaptadas = data.map((row, index) => {
-          const cliente = typeof row["CLIENTE"] === "string" ? row["CLIENTE"] : "";
-          const fechaRaw = row["FECHA"] || "";
-          const vencimientoRaw = row["VENCIMIENTO"] || "";
-          let dias = 0;
           try {
+            const cliente = typeof row["CLIENTE"] === "string" ? row["CLIENTE"] : "";
+            const fechaRaw = row["FECHA"] || "";
+            const vencimientoRaw = row["VENCIMIENTO"] || "";
+            let dias = 0;
             const fechaObj = new Date(fechaRaw);
-            dias = (hoy - fechaObj) / (1000 * 60 * 60 * 24);
-            if (isNaN(dias)) dias = 0;
-          } catch {
-            dias = 0;
+            if (!isNaN(fechaObj)) {
+              dias = (hoy - fechaObj) / (1000 * 60 * 60 * 24);
+            }
+
+            const debe = (row["DEBE"] || "").toString().toUpperCase();
+            let estado = "PAGADO";
+            if (debe === "SI") estado = "IMPAGO";
+            else if (debe === "NO") estado = "PENDIENTE";
+
+            return {
+              id: index,
+              fecha: formatearFecha(fechaRaw),
+              nroFactura: row["FACTURA"] || "",
+              importe: parseFloat((row["IMPORTE"] || "0").toString().replace(/[^0-9.-]+/g, "")),
+              cliente,
+              condicion: row["CONDICION"] || "",
+              recibo: row["RECIBO"] || "",
+              vencimiento: formatearFecha(vencimientoRaw),
+              estado,
+              dias,
+              debe
+            };
+          } catch (error) {
+            console.error("❌ Error adaptando fila:", row, error);
+            return null;
           }
-          const debe = row["DEBE"]?.toUpperCase();
+        }).filter(Boolean);
 
-          let estado = "PAGADO";
-          if (debe === "SI") estado = "IMPAGO";
-          else if (debe === "NO") estado = "PENDIENTE";
-
-          return {
-            id: index,
-            fecha: formatearFecha(fechaRaw),
-            nroFactura: row["FACTURA"] || "",
-            importe: parseFloat((row["IMPORTE"] || "0").toString().replace(/[^0-9.-]+/g, "")),
-            cliente,
-            condicion: row["CONDICION"] || "",
-            recibo: row["RECIBO"] || "",
-            vencimiento: formatearFecha(vencimientoRaw),
-            estado,
-            dias,
-            debe
-          };
-        });
         setFacturas(adaptadas);
-      });
+      })
+      .catch((err) => console.error("❌ Error en fetch de facturas:", err));
   }, []);
 
-  const marcarComoPagada = (factura) => {
-    const nuevaFactura = { ...factura, estado: "PAGADO", debe: "" };
-    fetch(API_PROXY_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(nuevaFactura)
-    })
-      .then((res) => res.text())
-      .then((res) => {
-        setFacturas((prev) =>
-          prev.map((f) => (f.id === factura.id ? { ...f, estado: "PAGADO", debe: "" } : f))
-        );
-      })
-      .catch((err) => console.error("❌ Error al marcar como pagada:", err));
-  };
-
-  const filtrarFacturas = () => {
-    return facturas.filter((f) => {
-      const cliente = typeof f.cliente === "string" ? f.cliente : "";
-      const cumpleCliente = cliente.toLowerCase().includes(clienteFiltro.toLowerCase());
-
-      switch (tabActiva) {
-        case "> 30 días":
-          return cumpleCliente && f.dias > 30;
-        case "< 30 días":
-          return cumpleCliente && f.dias <= 30;
-        case "Pagadas":
-          return cumpleCliente && f.estado === "PAGADO";
-        case "Adeudadas":
-          return cumpleCliente && (f.estado === "IMPAGO" || f.estado === "PENDIENTE");
-        default:
-          return cumpleCliente;
-      }
-    });
-  };
-
-  const getEstadoColor = (estado) => {
-    if (estado === "PAGADO") return "text-green-500";
-    if (estado === "PENDIENTE") return "text-yellow-500";
-    if (estado === "IMPAGO") return "text-red-500";
-    return "text-gray-500";
-  };
-
-  const facturasFiltradas = filtrarFacturas();
-  const totalPorEstado = facturasFiltradas.reduce((acc, f) => {
-    acc[f.estado] = (acc[f.estado] || 0) + f.importe;
-    return acc;
-  }, {});
-
-  const agrupadasPorCliente = clienteFiltro
-    ? {
-        pagadas: facturas.filter(
-          (f) => f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase()) && f.estado === "PAGADO"
-        ),
-        adeudadas: facturas.filter(
-          (f) => f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase()) && (f.estado === "IMPAGO" || f.estado === "PENDIENTE")
-        )
-      }
-    : null;
-
   return (
-    <div className="flex bg-gray-100 min-h-screen font-sans w-full">
-      <aside className="w-64 bg-white shadow p-4">
-        <h2 className="text-lg font-bold mb-4">Menú</h2>
-        <div className="space-y-2">
-          {TABS.map((tab) => (
-            <button
-              key={tab.name}
-              className={`w-full text-left px-3 py-2 rounded ${
-                tabActiva === tab.name ? "bg-blue-600 text-white" : "hover:bg-gray-100"
-              }`}
-              onClick={() => setTabActiva(tab.name)}
-            >
-              {tab.icon} {tab.name}
-            </button>
-          ))}
-        </div>
-      </aside>
-
-      <main className="flex-1 p-6 overflow-auto">
-        <h1 className="text-2xl font-bold mb-4">Estado de Cuenta</h1>
-
+    <div className="flex h-screen">
+      <aside className="w-60 bg-gray-800 text-white p-4 space-y-4">
+        <h2 className="text-xl font-bold mb-4">Menú</h2>
+        {TABS.map((tab) => (
+          <button
+            key={tab.name}
+            className={`w-full text-left px-4 py-2 rounded hover:bg-gray-700 ${
+              tabActiva === tab.name ? "bg-gray-700" : ""
+            }`}
+            onClick={() => setTabActiva(tab.name)}
+          >
+            {tab.icon} {tab.name}
+          </button>
+        ))}
         <input
-          type="text"
+          className="w-full p-2 mt-4 rounded text-black"
           placeholder="Buscar cliente..."
           value={clienteFiltro}
           onChange={(e) => setClienteFiltro(e.target.value)}
-          className="mb-4 p-2 border rounded w-full max-w-sm"
         />
+      </aside>
 
-        <div className="mb-4 flex gap-4">
-          {Object.entries(totalPorEstado).map(([estado, total]) => (
-            <div key={estado} className={`text-sm font-medium ${getEstadoColor(estado)}`}>
-              {estado}: ${total.toFixed(2)}
-            </div>
-          ))}
-        </div>
-
-        {agrupadasPorCliente ? (
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <h2 className="text-lg font-semibold mb-2">Adeudadas</h2>
-              {agrupadasPorCliente.adeudadas.map((f, i) => (
-                <div key={i} className="bg-white p-4 rounded shadow mb-2">
-                  <div className="flex justify-between">
-                    <div>
-                      <p className="text-sm font-semibold">{f.fecha} - {f.nroFactura}</p>
-                      <p className="text-xs">${f.importe}</p>
-                    </div>
+      <main className="flex-1 p-6 overflow-y-auto bg-gray-100">
+        <h1 className="text-2xl font-bold mb-4">Facturas - {tabActiva}</h1>
+        <div className="grid gap-4">
+          {facturas
+            .filter((f) => f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase()))
+            .filter((f) => {
+              if (tabActiva === "> 30 días") return f.estado !== "PAGADO" && f.dias > 30;
+              if (tabActiva === "< 30 días") return f.estado !== "PAGADO" && f.dias <= 30;
+              if (tabActiva === "Pagadas") return f.estado === "PAGADO";
+              if (tabActiva === "Adeudadas") return f.estado === "IMPAGO" || f.estado === "PENDIENTE";
+              return true;
+            })
+            .map((factura) => (
+              <div key={factura.id} className="bg-white p-4 rounded shadow border">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p><strong>Cliente:</strong> {factura.cliente}</p>
+                    <p><strong>Factura:</strong> {factura.nroFactura}</p>
+                    <p><strong>Fecha:</strong> {factura.fecha}</p>
+                    <p><strong>Importe:</strong> ${factura.importe.toFixed(2)}</p>
+                    <p><strong>Estado:</strong> {factura.estado}</p>
+                    <p><strong>Vencimiento:</strong> {factura.vencimiento}</p>
+                  </div>
+                  {factura.estado !== "PAGADO" && (
                     <button
-                      onClick={() => marcarComoPagada(f)}
-                      className="text-xs text-blue-600 hover:underline"
+                      onClick={() => marcarComoPagada(factura)}
+                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
                     >
                       Marcar como pagada
                     </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold mb-2">Pagadas</h2>
-              {agrupadasPorCliente.pagadas.map((f, i) => (
-                <div key={i} className="bg-white p-4 rounded shadow mb-2">
-                  <p className="text-sm font-semibold">{f.fecha} - {f.nroFactura}</p>
-                  <p className="text-xs">${f.importe}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {facturasFiltradas.map((f, i) => (
-              <div key={i} className="bg-white p-4 rounded shadow">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                  <div><strong>Fecha:</strong> {f.fecha}</div>
-                  <div><strong>Factura:</strong> {f.nroFactura}</div>
-                  <div><strong>Cliente:</strong> {f.cliente}</div>
-                  <div className={getEstadoColor(f.estado)}><strong>Estado:</strong> {f.estado}</div>
+                  )}
                 </div>
               </div>
             ))}
-          </div>
-        )}
+        </div>
       </main>
     </div>
   );
+
+  function marcarComoPagada(factura) {
+    console.log("🟢 Click en botón Marcar como pagada:", factura);
+    fetch(API_PROXY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nroFactura: factura.nroFactura })
+    })
+      .then((res) => res.text())
+      .then((msg) => {
+        console.log("✅ Respuesta del servidor:", msg);
+        setFacturas((prev) =>
+          prev.map((f) =>
+            f.nroFactura === factura.nroFactura ? { ...f, estado: "PAGADO" } : f
+          )
+        );
+      })
+      .catch((err) => console.error("❌ Error al marcar como pagada:", err));
+  }
 }
+
