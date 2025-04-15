@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 
 const API_PROXY_URL = "/api/marcarPagada"; // proxy para evitar CORS
-const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbybaSy-ZVcNJjbmQtUhAQlj9OOCysx4AV2rvsAPzuAxHFHZFkwd5z0gxh7JOiBNDgo3KQ/exec";
+const GOOGLE_SHEET_API_URL = "/api/fetchFacturas"; // nueva ruta para el GET también
 
 const TABS = [
   { name: "Todas", icon: "📋" },
@@ -73,7 +73,7 @@ export default function EstadoCuentaERP() {
       .then((res) => {
         console.log("🔄 Respuesta del servidor:", res);
         setFacturas((prev) =>
-          prev.map((f) => (f.id === factura.id ? { ...f, estado: "PAGADO" } : f))
+          prev.map((f) => (f.id === factura.id ? { ...f, estado: "PAGADO", debe: "" } : f))
         );
       })
       .catch((err) => console.error("❌ Error al marcar como pagada:", err));
@@ -246,3 +246,4 @@ function TablaFacturas({ data, getEstadoColor, onMarcarPagada }) {
     </div>
   );
 }
+
