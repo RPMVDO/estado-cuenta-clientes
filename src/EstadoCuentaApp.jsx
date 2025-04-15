@@ -14,6 +14,7 @@ export default function EstadoCuentaERP() {
     fetch(GOOGLE_SHEET_API_URL)
       .then((res) => res.json())
       .then((data) => {
+        console.log("Datos recibidos:", data);
         const adaptadas = data.map((row) => ({
           fecha: row["FECHA"] || "",
           nroFactura: row["FACTURA"] || "",
@@ -31,7 +32,7 @@ export default function EstadoCuentaERP() {
   const filtrarFacturas = () => {
     const hoy = new Date();
     return facturas.filter((f) => {
-      const cumpleCliente = f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase());
+      const cumpleCliente = (f.cliente || "").toLowerCase().includes(clienteFiltro.toLowerCase());
       const fechaFactura = new Date(f.fecha);
       const dias = (hoy - fechaFactura) / (1000 * 60 * 60 * 24);
 
