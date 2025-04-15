@@ -1,20 +1,23 @@
 export default async function handler(req, res) {
   const scriptUrl = "https://script.google.com/macros/s/AKfycbybaSy-ZVcNJjbmQtUhAQlj9OOCysx4AV2rvsAPzuAxHFHZFkwd5z0gxh7JOiBNDgo3KQ/exec";
 
-  if (req.method === "POST") {
-    try {
-      const response = await fetch(scriptUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body)
-      });
+  if (req.method !== "POST") {
+    return res.status(405).send("Solo se permiten POST requests");
+  }
 
-      const text = await response.text();
-      res.status(200).send(text);
-    } catch (error) {
-      res.status(500).send("Error en el proxy: " + error.message);
-    }
-  } else {
-    res.status(405).send("Método no permitido");
+  try {
+    const response = await fetch(scriptUrl, {
+      method: "POST",
+      body: JSON.stringify(req.body),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const text = await response.text();
+    return res.status(200).send(text);
+  } catch (error) {
+    console.error("❌ Error en proxy:", error);
+    return res.status(500).send("Error en proxy: " + error.message);
   }
 }
