@@ -15,17 +15,27 @@ export default function EstadoCuentaERP() {
       .then((res) => res.json())
       .then((data) => {
         console.log("Datos recibidos:", data);
+        const hoy = new Date();
         const adaptadas = data.map((row) => {
           const cliente = typeof row["CLIENTE"] === "string" ? row["CLIENTE"] : "";
+          const fecha = row["FECHA"] || "";
+          const dias = (hoy - new Date(fecha)) / (1000 * 60 * 60 * 24);
+          const debe = row["DEBE"]?.toUpperCase();
+          const estado = debe === "SI"
+            ? dias > 30
+              ? "IMPAGO"
+              : "PENDIENTE"
+            : "PAGADO";
+
           return {
-            fecha: row["FECHA"] || "",
+            fecha,
             nroFactura: row["FACTURA"] || "",
             importe: parseFloat((row["IMPORTE"] || "0").toString().replace(/[^0-9.-]+/g, "")),
             cliente,
             condicion: row["CONDICION"] || "",
             recibo: row["RECIBO"] || "",
             vencimiento: row["VENCIMIENTO"] || "",
-            estado: row["DEBE"]?.toUpperCase() === "SI" ? "IMPAGO" : "PAGADO"
+            estado
           };
         });
         setFacturas(adaptadas);
@@ -48,7 +58,7 @@ export default function EstadoCuentaERP() {
         case "Pagadas":
           return cumpleCliente && f.estado === "PAGADO";
         case "Adeudadas":
-          return cumpleCliente && f.estado === "IMPAGO";
+          return cumpleCliente && (f.estado === "IMPAGO" || f.estado === "PENDIENTE");
         default:
           return cumpleCliente;
       }
@@ -111,7 +121,7 @@ export default function EstadoCuentaERP() {
                       ? "text-green-600"
                       : f.estado === "IMPAGO"
                       ? "text-red-600"
-                      : "text-gray-600"
+                      : "text-yellow-600"
                   }`}>
                     {f.estado || "-"}
                   </td>
