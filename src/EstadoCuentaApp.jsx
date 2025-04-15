@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 
+const API_PROXY_URL = "/api/marcarPagada"; // proxy para evitar CORS
 const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbybaSy-ZVcNJjbmQtUhAQlj9OOCysx4AV2rvsAPzuAxHFHZFkwd5z0gxh7JOiBNDgo3KQ/exec";
 
 const TABS = [
@@ -63,7 +64,7 @@ export default function EstadoCuentaERP() {
   const marcarComoPagada = (factura) => {
     console.log("🟢 Click en botón Marcar como pagada:", factura);
     const nuevaFactura = { ...factura, estado: "PAGADO", debe: "" };
-    fetch(GOOGLE_SHEET_API_URL, {
+    fetch(API_PROXY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(nuevaFactura)
