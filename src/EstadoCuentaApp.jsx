@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 
-const API_PROXY_URL = "/api/marcarPagada"; // proxy para evitar CORS
-const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbyYz7Cqx-QNaYataaXpoBeZ3sLv8N1IDnAts14hLcxDOI1-zLBzjmagDS0BarLvgmClfQ/exec"; // nuevo endpoint directo sin proxy
+const API_PROXY_URL = "/api/marcarPagada";
+const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbyYz7Cqx-QNaYataaXpoBeZ3sLv8N1IDnAts14hLcxDOI1-zLBzjmagDS0BarLvgmClfQ/exec";
 
 const TABS = [
   { name: "Todas", icon: "📋" },
@@ -19,6 +19,8 @@ export default function EstadoCuentaERP() {
 
   const formatearFecha = (str) => {
     if (!str) return "";
+    const partes = str.split("/");
+    if (partes.length === 3) return str;
     const d = new Date(str);
     if (isNaN(d)) return str;
     const dd = d.getDate().toString().padStart(2, "0");
@@ -36,7 +38,14 @@ export default function EstadoCuentaERP() {
           const cliente = typeof row["CLIENTE"] === "string" ? row["CLIENTE"] : "";
           const fechaRaw = row["FECHA"] || "";
           const vencimientoRaw = row["VENCIMIENTO"] || "";
-          const dias = (hoy - new Date(fechaRaw)) / (1000 * 60 * 60 * 24);
+          let dias = 0;
+          try {
+            const fechaObj = new Date(fechaRaw);
+            dias = (hoy - fechaObj) / (1000 * 60 * 60 * 24);
+            if (isNaN(dias)) dias = 0;
+          } catch {
+            dias = 0;
+          }
           const debe = row["DEBE"]?.toUpperCase();
 
           let estado = "PAGADO";
@@ -124,125 +133,89 @@ export default function EstadoCuentaERP() {
     : null;
 
   return (
-    <div className="flex bg-gray-100 min-h-screen font-sans">
-      <aside className="w-64 bg-white border-r shadow-md p-6">
-        <h2 className="text-xl font-bold text-blue-700 mb-6">📊 ERP Panel</h2>
-        <nav className="space-y-2">
-          {TABS.map(({ name, icon }) => (
+    <div className="flex bg-gray-100 min-h-screen font-sans w-full">
+      <aside className="w-64 bg-white shadow p-4">
+        <h2 className="text-lg font-bold mb-4">Menú</h2>
+        <div className="space-y-2">
+          {TABS.map((tab) => (
             <button
-              key={name}
-              className={`block w-full text-left px-4 py-2 rounded-md font-medium flex items-center gap-2 ${
-                tabActiva === name ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100 text-gray-700"
+              key={tab.name}
+              className={`w-full text-left px-3 py-2 rounded ${
+                tabActiva === tab.name ? "bg-blue-600 text-white" : "hover:bg-gray-100"
               }`}
-              onClick={() => setTabActiva(name)}
+              onClick={() => setTabActiva(tab.name)}
             >
-              <span>{icon}</span> {name}
+              {tab.icon} {tab.name}
             </button>
           ))}
-        </nav>
+        </div>
       </aside>
 
-      <main className="flex-1 p-10">
-        <header className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-800">Estado de Cuenta</h1>
-        </header>
+      <main className="flex-1 p-6 overflow-auto">
+        <h1 className="text-2xl font-bold mb-4">Estado de Cuenta</h1>
 
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder="🔍 Buscar cliente..."
-            className="w-full px-4 py-2 text-sm rounded-md border shadow-sm focus:ring-2 focus:ring-blue-300 outline-none"
-            value={clienteFiltro}
-            onChange={(e) => setClienteFiltro(e.target.value)}
-          />
-        </div>
+        <input
+          type="text"
+          placeholder="Buscar cliente..."
+          value={clienteFiltro}
+          onChange={(e) => setClienteFiltro(e.target.value)}
+          className="mb-4 p-2 border rounded w-full max-w-sm"
+        />
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+        <div className="mb-4 flex gap-4">
           {Object.entries(totalPorEstado).map(([estado, total]) => (
-            <div
-              key={estado}
-              className={`p-4 rounded-lg shadow-md ${
-                estado === "PAGADO"
-                  ? "bg-green-100 text-green-800"
-                  : estado === "IMPAGO"
-                  ? "bg-red-100 text-red-800"
-                  : "bg-yellow-100 text-yellow-800"
-              }`}
-            >
-              <div className="text-xs uppercase font-semibold tracking-wide">{estado}</div>
-              <div className="text-xl font-bold mt-1">${total.toFixed(2)}</div>
+            <div key={estado} className={`text-sm font-medium ${getEstadoColor(estado)}`}>
+              {estado}: ${total.toFixed(2)}
             </div>
           ))}
         </div>
 
         {agrupadasPorCliente ? (
-          <>
-            <Section title="Facturas Pagadas">
-              <TablaFacturas data={agrupadasPorCliente.pagadas} getEstadoColor={getEstadoColor} onMarcarPagada={marcarComoPagada} />
-            </Section>
-            <Section title="Facturas Adeudadas">
-              <TablaFacturas data={agrupadasPorCliente.adeudadas} getEstadoColor={getEstadoColor} onMarcarPagada={marcarComoPagada} />
-            </Section>
-          </>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Adeudadas</h2>
+              {agrupadasPorCliente.adeudadas.map((f, i) => (
+                <div key={i} className="bg-white p-4 rounded shadow mb-2">
+                  <div className="flex justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">{f.fecha} - {f.nroFactura}</p>
+                      <p className="text-xs">${f.importe}</p>
+                    </div>
+                    <button
+                      onClick={() => marcarComoPagada(f)}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Marcar como pagada
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Pagadas</h2>
+              {agrupadasPorCliente.pagadas.map((f, i) => (
+                <div key={i} className="bg-white p-4 rounded shadow mb-2">
+                  <p className="text-sm font-semibold">{f.fecha} - {f.nroFactura}</p>
+                  <p className="text-xs">${f.importe}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
-          <Section>
-            <TablaFacturas data={facturasFiltradas} getEstadoColor={getEstadoColor} onMarcarPagada={marcarComoPagada} />
-          </Section>
+          <div className="grid gap-4">
+            {facturasFiltradas.map((f, i) => (
+              <div key={i} className="bg-white p-4 rounded shadow">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                  <div><strong>Fecha:</strong> {f.fecha}</div>
+                  <div><strong>Factura:</strong> {f.nroFactura}</div>
+                  <div><strong>Cliente:</strong> {f.cliente}</div>
+                  <div className={getEstadoColor(f.estado)}><strong>Estado:</strong> {f.estado}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </main>
-    </div>
-  );
-}
-
-function Section({ title, children }) {
-  return (
-    <section className="mb-12">
-      {title && <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">{title}</h2>}
-      {children}
-    </section>
-  );
-}
-
-function TablaFacturas({ data, getEstadoColor, onMarcarPagada }) {
-  return (
-    <div className="overflow-x-auto bg-white rounded-md shadow-md">
-      <table className="min-w-full text-sm">
-        <thead className="bg-blue-50 text-blue-700">
-          <tr>
-            <th className="px-4 py-3 text-left">Fecha</th>
-            <th className="px-4 py-3 text-left">Factura</th>
-            <th className="px-4 py-3 text-left">Cliente</th>
-            <th className="px-4 py-3 text-left">Importe</th>
-            <th className="px-4 py-3 text-left">Condición</th>
-            <th className="px-4 py-3 text-left">Vencimiento</th>
-            <th className="px-4 py-3 text-left">Estado</th>
-            <th className="px-4 py-3 text-left">Acciones</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {data.map((f, idx) => (
-            <tr key={idx} className="hover:bg-gray-50">
-              <td className="px-4 py-2 whitespace-nowrap">{f.fecha}</td>
-              <td className="px-4 py-2 whitespace-nowrap">{f.nroFactura}</td>
-              <td className="px-4 py-2 whitespace-nowrap">{f.cliente}</td>
-              <td className="px-4 py-2 whitespace-nowrap font-medium text-gray-800">${f.importe.toFixed(2)}</td>
-              <td className="px-4 py-2 whitespace-nowrap">{f.condicion}</td>
-              <td className="px-4 py-2 whitespace-nowrap">{f.vencimiento}</td>
-              <td className={`px-4 py-2 whitespace-nowrap font-semibold ${getEstadoColor(f.estado)}`}>{f.estado || "-"}</td>
-              <td className="px-4 py-2 whitespace-nowrap">
-                {f.estado !== "PAGADO" && (
-                  <button
-                    onClick={() => onMarcarPagada(f)}
-                    className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-xs"
-                  >
-                    Marcar como pagada
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }
