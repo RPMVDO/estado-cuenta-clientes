@@ -16,6 +16,16 @@ export default function EstadoCuentaERP() {
   const [clienteFiltro, setClienteFiltro] = useState("");
   const [tabActiva, setTabActiva] = useState("Todas");
 
+  const formatearFecha = (str) => {
+    if (!str) return "";
+    const d = new Date(str);
+    if (isNaN(d)) return str;
+    const dd = d.getDate().toString().padStart(2, "0");
+    const mm = (d.getMonth() + 1).toString().padStart(2, "0");
+    const yy = d.getFullYear().toString().slice(-2);
+    return `${dd}/${mm}/${yy}`;
+  };
+
   useEffect(() => {
     fetch(GOOGLE_SHEET_API_URL)
       .then((res) => res.json())
@@ -23,8 +33,9 @@ export default function EstadoCuentaERP() {
         const hoy = new Date();
         const adaptadas = data.map((row) => {
           const cliente = typeof row["CLIENTE"] === "string" ? row["CLIENTE"] : "";
-          const fecha = row["FECHA"] || "";
-          const dias = (hoy - new Date(fecha)) / (1000 * 60 * 60 * 24);
+          const fechaRaw = row["FECHA"] || "";
+          const vencimientoRaw = row["VENCIMIENTO"] || "";
+          const dias = (hoy - new Date(fechaRaw)) / (1000 * 60 * 60 * 24);
           const debe = row["DEBE"]?.toUpperCase();
 
           let estado = "PAGADO";
@@ -32,13 +43,13 @@ export default function EstadoCuentaERP() {
           else if (debe === "NO") estado = "PENDIENTE";
 
           return {
-            fecha,
+            fecha: formatearFecha(fechaRaw),
             nroFactura: row["FACTURA"] || "",
             importe: parseFloat((row["IMPORTE"] || "0").toString().replace(/[^0-9.-]+/g, "")),
             cliente,
             condicion: row["CONDICION"] || "",
             recibo: row["RECIBO"] || "",
-            vencimiento: row["VENCIMIENTO"] || "",
+            vencimiento: formatearFecha(vencimientoRaw),
             estado,
             dias,
             debe
