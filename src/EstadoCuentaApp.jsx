@@ -25,7 +25,7 @@ export default function EstadoCuentaERP() {
             condicion: row["CONDICION"] || "",
             recibo: row["RECIBO"] || "",
             vencimiento: row["VENCIMIENTO"] || "",
-            estado: row["DEBE"] || ""
+            estado: row["DEBE"]?.toUpperCase() === "SI" ? "IMPAGO" : "PAGADO"
           };
         });
         setFacturas(adaptadas);
@@ -46,9 +46,9 @@ export default function EstadoCuentaERP() {
         case "< 30 días":
           return cumpleCliente && dias <= 30;
         case "Pagadas":
-          return cumpleCliente && f.estado?.toUpperCase() === "PAGADO";
+          return cumpleCliente && f.estado === "PAGADO";
         case "Adeudadas":
-          return cumpleCliente && ["DEBE", "IMPAGO"].includes(f.estado?.toUpperCase());
+          return cumpleCliente && f.estado === "IMPAGO";
         default:
           return cumpleCliente;
       }
@@ -107,9 +107,9 @@ export default function EstadoCuentaERP() {
                   <td className="p-2 border">{f.condicion}</td>
                   <td className="p-2 border">{f.vencimiento}</td>
                   <td className={`p-2 border font-semibold ${
-                    f.estado?.toUpperCase() === "PAGADO"
+                    f.estado === "PAGADO"
                       ? "text-green-600"
-                      : ["DEBE", "IMPAGO"].includes(f.estado?.toUpperCase())
+                      : f.estado === "IMPAGO"
                       ? "text-red-600"
                       : "text-gray-600"
                   }`}>
