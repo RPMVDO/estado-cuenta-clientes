@@ -66,7 +66,7 @@ export default function EstadoCuentaERP() {
   };
 
   const getEstadoColor = (estado) => {
-    if (estado === "PAGADO") return "text-green-600";
+    if (estado === "PAGADO") return "text-green-500";
     if (estado === "PENDIENTE") return "text-yellow-500";
     if (estado === "IMPAGO") return "text-red-500";
     return "text-gray-500";
@@ -89,23 +89,27 @@ export default function EstadoCuentaERP() {
     : null;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen">
-      <h1 className="text-4xl font-semibold mb-8 text-blue-700">Estado de Cuenta ERP</h1>
+    <div className="p-10 max-w-screen-xl mx-auto bg-[#f9fafb] min-h-screen font-sans">
+      <header className="mb-10 border-b pb-6 flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight text-blue-700">📋 Estado de Cuenta ERP</h1>
+      </header>
 
-      <input
-        type="text"
-        placeholder="Buscar cliente..."
-        className="border px-4 py-3 rounded-xl w-full mb-6 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-        value={clienteFiltro}
-        onChange={(e) => setClienteFiltro(e.target.value)}
-      />
+      <div className="mb-8">
+        <input
+          type="text"
+          placeholder="🔍 Buscar cliente..."
+          className="w-full px-4 py-3 text-sm rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-400 outline-none"
+          value={clienteFiltro}
+          onChange={(e) => setClienteFiltro(e.target.value)}
+        />
+      </div>
 
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="flex gap-2 flex-wrap mb-8">
         {TABS.map((tab) => (
           <button
             key={tab}
-            className={`px-5 py-2 rounded-xl text-sm font-medium transition-all duration-200 shadow-sm ${
-              tabActiva === tab ? "bg-blue-600 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
+            className={`text-sm font-medium px-4 py-2 rounded-full ${
+              tabActiva === tab ? "bg-blue-600 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-blue-50"
             }`}
             onClick={() => setTabActiva(tab)}
           >
@@ -114,63 +118,76 @@ export default function EstadoCuentaERP() {
         ))}
       </div>
 
-      <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {Object.entries(totalPorEstado).map(([estado, total]) => (
           <div
             key={estado}
-            className={`rounded-xl p-4 shadow border-l-4 ${
+            className={`p-4 rounded-lg shadow-sm ${
               estado === "PAGADO"
-                ? "border-green-500 bg-green-50"
+                ? "bg-green-100 text-green-800"
                 : estado === "IMPAGO"
-                ? "border-red-500 bg-red-50"
-                : "border-yellow-500 bg-yellow-50"
+                ? "bg-red-100 text-red-800"
+                : "bg-yellow-100 text-yellow-800"
             }`}
           >
-            <div className="text-sm text-gray-600">{estado}</div>
-            <div className="text-xl font-bold">${total.toFixed(2)}</div>
+            <div className="text-xs uppercase font-semibold tracking-wide">{estado}</div>
+            <div className="text-lg font-bold mt-1">${total.toFixed(2)}</div>
           </div>
         ))}
       </div>
 
       {agrupadasPorCliente ? (
         <>
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">Pagadas</h2>
-          <TablaFacturas data={agrupadasPorCliente.pagadas} getEstadoColor={getEstadoColor} />
-          <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-800">Impagas</h2>
-          <TablaFacturas data={agrupadasPorCliente.adeudadas} getEstadoColor={getEstadoColor} />
+          <Section title="Facturas Pagadas">
+            <TablaFacturas data={agrupadasPorCliente.pagadas} getEstadoColor={getEstadoColor} />
+          </Section>
+          <Section title="Facturas Adeudadas">
+            <TablaFacturas data={agrupadasPorCliente.adeudadas} getEstadoColor={getEstadoColor} />
+          </Section>
         </>
       ) : (
-        <TablaFacturas data={facturasFiltradas} getEstadoColor={getEstadoColor} />
+        <Section>
+          <TablaFacturas data={facturasFiltradas} getEstadoColor={getEstadoColor} />
+        </Section>
       )}
     </div>
   );
 }
 
+function Section({ title, children }) {
+  return (
+    <section className="mb-12">
+      {title && <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">{title}</h2>}
+      {children}
+    </section>
+  );
+}
+
 function TablaFacturas({ data, getEstadoColor }) {
   return (
-    <div className="overflow-auto rounded-xl shadow border bg-white">
+    <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
       <table className="min-w-full text-sm">
-        <thead className="bg-gray-100 text-gray-700 text-left">
+        <thead className="bg-blue-50 text-blue-700">
           <tr>
-            <th className="p-3">Fecha</th>
-            <th className="p-3">Factura</th>
-            <th className="p-3">Cliente</th>
-            <th className="p-3">Importe</th>
-            <th className="p-3">Condición</th>
-            <th className="p-3">Vencimiento</th>
-            <th className="p-3">Estado</th>
+            <th className="px-4 py-3 text-left">Fecha</th>
+            <th className="px-4 py-3 text-left">Factura</th>
+            <th className="px-4 py-3 text-left">Cliente</th>
+            <th className="px-4 py-3 text-left">Importe</th>
+            <th className="px-4 py-3 text-left">Condición</th>
+            <th className="px-4 py-3 text-left">Vencimiento</th>
+            <th className="px-4 py-3 text-left">Estado</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-gray-100">
           {data.map((f, idx) => (
-            <tr key={idx} className="border-t hover:bg-gray-50">
-              <td className="p-3 whitespace-nowrap">{f.fecha}</td>
-              <td className="p-3 whitespace-nowrap">{f.nroFactura}</td>
-              <td className="p-3 whitespace-nowrap">{f.cliente}</td>
-              <td className="p-3 whitespace-nowrap font-semibold">${f.importe.toFixed(2)}</td>
-              <td className="p-3 whitespace-nowrap">{f.condicion}</td>
-              <td className="p-3 whitespace-nowrap">{f.vencimiento}</td>
-              <td className={`p-3 whitespace-nowrap font-semibold ${getEstadoColor(f.estado)}`}>{f.estado || "-"}</td>
+            <tr key={idx} className="hover:bg-gray-50">
+              <td className="px-4 py-2 whitespace-nowrap">{f.fecha}</td>
+              <td className="px-4 py-2 whitespace-nowrap">{f.nroFactura}</td>
+              <td className="px-4 py-2 whitespace-nowrap">{f.cliente}</td>
+              <td className="px-4 py-2 whitespace-nowrap font-medium text-gray-800">${f.importe.toFixed(2)}</td>
+              <td className="px-4 py-2 whitespace-nowrap">{f.condicion}</td>
+              <td className="px-4 py-2 whitespace-nowrap">{f.vencimiento}</td>
+              <td className={`px-4 py-2 whitespace-nowrap font-semibold ${getEstadoColor(f.estado)}`}>{f.estado || "-"}</td>
             </tr>
           ))}
         </tbody>
