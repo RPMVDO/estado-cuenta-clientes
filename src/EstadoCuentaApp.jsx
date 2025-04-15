@@ -89,67 +89,72 @@ export default function EstadoCuentaERP() {
     : null;
 
   return (
-    <div className="p-10 max-w-screen-xl mx-auto bg-[#f9fafb] min-h-screen font-sans">
-      <header className="mb-10 border-b pb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-blue-700">📋 Estado de Cuenta ERP</h1>
-      </header>
+    <div className="flex bg-gray-100 min-h-screen font-sans">
+      <aside className="w-64 bg-white border-r shadow-md p-6">
+        <h2 className="text-xl font-semibold text-blue-700 mb-6">🧾 ERP Panel</h2>
+        <nav className="space-y-2">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              className={`block w-full text-left px-4 py-2 rounded-md font-medium ${
+                tabActiva === tab ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100 text-gray-700"
+              }`}
+              onClick={() => setTabActiva(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </nav>
+      </aside>
 
-      <div className="mb-8">
-        <input
-          type="text"
-          placeholder="🔍 Buscar cliente..."
-          className="w-full px-4 py-3 text-sm rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-400 outline-none"
-          value={clienteFiltro}
-          onChange={(e) => setClienteFiltro(e.target.value)}
-        />
-      </div>
+      <main className="flex-1 p-10">
+        <header className="mb-8 flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-gray-800">Estado de Cuenta</h1>
+        </header>
 
-      <div className="flex gap-2 flex-wrap mb-8">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            className={`text-sm font-medium px-4 py-2 rounded-full ${
-              tabActiva === tab ? "bg-blue-600 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-blue-50"
-            }`}
-            onClick={() => setTabActiva(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+        <div className="mb-6">
+          <input
+            type="text"
+            placeholder="🔍 Buscar cliente..."
+            className="w-full px-4 py-2 text-sm rounded-md border shadow-sm focus:ring-2 focus:ring-blue-300 outline-none"
+            value={clienteFiltro}
+            onChange={(e) => setClienteFiltro(e.target.value)}
+          />
+        </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        {Object.entries(totalPorEstado).map(([estado, total]) => (
-          <div
-            key={estado}
-            className={`p-4 rounded-lg shadow-sm ${
-              estado === "PAGADO"
-                ? "bg-green-100 text-green-800"
-                : estado === "IMPAGO"
-                ? "bg-red-100 text-red-800"
-                : "bg-yellow-100 text-yellow-800"
-            }`}
-          >
-            <div className="text-xs uppercase font-semibold tracking-wide">{estado}</div>
-            <div className="text-lg font-bold mt-1">${total.toFixed(2)}</div>
-          </div>
-        ))}
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+          {Object.entries(totalPorEstado).map(([estado, total]) => (
+            <div
+              key={estado}
+              className={`p-4 rounded-lg shadow-md ${
+                estado === "PAGADO"
+                  ? "bg-green-100 text-green-800"
+                  : estado === "IMPAGO"
+                  ? "bg-red-100 text-red-800"
+                  : "bg-yellow-100 text-yellow-800"
+              }`}
+            >
+              <div className="text-xs uppercase font-semibold tracking-wide">{estado}</div>
+              <div className="text-xl font-bold mt-1">${total.toFixed(2)}</div>
+            </div>
+          ))}
+        </div>
 
-      {agrupadasPorCliente ? (
-        <>
-          <Section title="Facturas Pagadas">
-            <TablaFacturas data={agrupadasPorCliente.pagadas} getEstadoColor={getEstadoColor} />
+        {agrupadasPorCliente ? (
+          <>
+            <Section title="Facturas Pagadas">
+              <TablaFacturas data={agrupadasPorCliente.pagadas} getEstadoColor={getEstadoColor} />
+            </Section>
+            <Section title="Facturas Adeudadas">
+              <TablaFacturas data={agrupadasPorCliente.adeudadas} getEstadoColor={getEstadoColor} />
+            </Section>
+          </>
+        ) : (
+          <Section>
+            <TablaFacturas data={facturasFiltradas} getEstadoColor={getEstadoColor} />
           </Section>
-          <Section title="Facturas Adeudadas">
-            <TablaFacturas data={agrupadasPorCliente.adeudadas} getEstadoColor={getEstadoColor} />
-          </Section>
-        </>
-      ) : (
-        <Section>
-          <TablaFacturas data={facturasFiltradas} getEstadoColor={getEstadoColor} />
-        </Section>
-      )}
+        )}
+      </main>
     </div>
   );
 }
@@ -157,7 +162,7 @@ export default function EstadoCuentaERP() {
 function Section({ title, children }) {
   return (
     <section className="mb-12">
-      {title && <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">{title}</h2>}
+      {title && <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">{title}</h2>}
       {children}
     </section>
   );
@@ -165,7 +170,7 @@ function Section({ title, children }) {
 
 function TablaFacturas({ data, getEstadoColor }) {
   return (
-    <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
+    <div className="overflow-x-auto bg-white rounded-md shadow-md">
       <table className="min-w-full text-sm">
         <thead className="bg-blue-50 text-blue-700">
           <tr>
