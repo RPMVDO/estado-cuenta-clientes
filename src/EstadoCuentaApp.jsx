@@ -81,7 +81,13 @@ export default function EstadoCuentaERP() {
       return true;
     });
 
-  const total = facturasFiltradas.reduce((acc, f) => acc + (f.importe || 0), 0);
+  const totalGeneral = facturasFiltradas.reduce((acc, f) => acc + (f.importe || 0), 0);
+  const totalPagado = facturasFiltradas
+    .filter((f) => f.estado === "PAGADO")
+    .reduce((acc, f) => acc + (f.importe || 0), 0);
+  const totalAdeudado = facturasFiltradas
+    .filter((f) => f.estado === "IMPAGO" || f.estado === "PENDIENTE")
+    .reduce((acc, f) => acc + (f.importe || 0), 0);
 
   return (
     <div className="flex h-screen">
@@ -107,7 +113,9 @@ export default function EstadoCuentaERP() {
       <main className="flex-1 p-6 overflow-y-auto bg-gray-100">
         <div className="mb-4">
           <h1 className="text-2xl font-bold mb-2">Facturas - {tabActiva}</h1>
-          <p className="text-gray-700 font-medium">Total: ${total.toFixed(2)}</p>
+          <p className="text-gray-700 font-medium">Total: ${totalGeneral.toFixed(2)}</p>
+          <p className="text-green-700 font-medium">Pagadas: ${totalPagado.toFixed(2)}</p>
+          <p className="text-red-700 font-medium">Adeudadas: ${totalAdeudado.toFixed(2)}</p>
         </div>
 
         <table className="min-w-full bg-white rounded shadow">
