@@ -16,6 +16,18 @@ export default function EstadoCuentaERP() {
   const [facturas, setFacturas] = useState([]);
   const [clienteFiltro, setClienteFiltro] = useState("");
   const [tabActiva, setTabActiva] = useState("Todas");
+  const [nuevaFactura, setNuevaFactura] = useState({
+    fecha: "",
+    nroFactura: "",
+    importe: "",
+    cliente: "",
+    condicion: "",
+    recibo: "",
+    vencimiento: "",
+    estado: "",
+    detalle: "",
+    patente: ""
+  });
 
   const formatearFecha = (fechaStr) => {
     if (!fechaStr) return "";
@@ -59,7 +71,9 @@ export default function EstadoCuentaERP() {
               vencimiento: formatearFecha(vencimientoRaw),
               estado,
               dias,
-              debe
+              debe,
+              detalle: row["DETALLE"] || "",
+              patente: row["PATENTE"] || ""
             };
           } catch (error) {
             return null;
@@ -82,12 +96,32 @@ export default function EstadoCuentaERP() {
     });
 
   const totalGeneral = facturasFiltradas.reduce((acc, f) => acc + (f.importe || 0), 0);
-  const totalPagado = facturasFiltradas
-    .filter((f) => f.estado === "PAGADO")
-    .reduce((acc, f) => acc + (f.importe || 0), 0);
-  const totalAdeudado = facturasFiltradas
-    .filter((f) => f.estado === "IMPAGO" || f.estado === "PENDIENTE")
-    .reduce((acc, f) => acc + (f.importe || 0), 0);
+  const totalPagado = facturasFiltradas.filter((f) => f.estado === "PAGADO").reduce((acc, f) => acc + (f.importe || 0), 0);
+  const totalAdeudado = facturasFiltradas.filter((f) => f.estado === "IMPAGO" || f.estado === "PENDIENTE").reduce((acc, f) => acc + (f.importe || 0), 0);
+
+  const handleAgregarFactura = () => {
+    fetch(GOOGLE_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nuevaFactura)
+    })
+      .then((res) => res.text())
+      .then(() => {
+        setFacturas((prev) => [...prev, nuevaFactura]);
+        setNuevaFactura({
+          fecha: "",
+          nroFactura: "",
+          importe: "",
+          cliente: "",
+          condicion: "",
+          recibo: "",
+          vencimiento: "",
+          estado: "",
+          detalle: "",
+          patente: ""
+        });
+      });
+  };
 
   return (
     <div className="flex h-screen">
@@ -111,11 +145,32 @@ export default function EstadoCuentaERP() {
       </aside>
 
       <main className="flex-1 p-6 overflow-y-auto bg-gray-100">
-        <div className="mb-4">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold mb-2">Facturas - {tabActiva}</h1>
           <p className="text-gray-700 font-medium">Total: ${totalGeneral.toFixed(2)}</p>
           <p className="text-green-700 font-medium">Pagadas: ${totalPagado.toFixed(2)}</p>
           <p className="text-red-700 font-medium">Adeudadas: ${totalAdeudado.toFixed(2)}</p>
+        </div>
+
+        <div className="mb-6 bg-white p-4 rounded shadow">
+          <h2 className="text-lg font-bold mb-2">Cargar nueva factura</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {Object.entries(nuevaFactura).map(([key, val]) => (
+              <input
+                key={key}
+                className="p-2 border rounded"
+                placeholder={key.charAt(0).toUpperCase() + key.slice(1)}
+                value={val}
+                onChange={(e) => setNuevaFactura({ ...nuevaFactura, [key]: e.target.value })}
+              />
+            ))}
+          </div>
+          <button
+            onClick={handleAgregarFactura}
+            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+          >
+            Agregar Factura
+          </button>
         </div>
 
         <table className="min-w-full bg-white rounded shadow">
