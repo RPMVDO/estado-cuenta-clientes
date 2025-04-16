@@ -27,6 +27,8 @@ export default function EstadoCuentaERP() {
   const [tabActiva, setTabActiva] = useState("Todas");
   const [resumenAnual, setResumenAnual] = useState({});
   const [resumenClientes, setResumenClientes] = useState({});
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState("");
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState("");
 
   const formatearFecha = (fechaStr) => {
     if (!fechaStr) return "";
@@ -109,6 +111,14 @@ export default function EstadoCuentaERP() {
   const facturasFiltradas = facturas
     .filter((f) => f.cliente.toLowerCase().includes(clienteFiltro.toLowerCase()))
     .filter((f) => {
+      if (filtroFechaDesde) {
+        const desde = new Date(filtroFechaDesde);
+        if (!isNaN(desde) && new Date(f.fechaRaw) < desde) return false;
+      }
+      if (filtroFechaHasta) {
+        const hasta = new Date(filtroFechaHasta);
+        if (!isNaN(hasta) && new Date(f.fechaRaw) > hasta) return false;
+      }
       if (tabActiva === "> 30 días") return f.estado !== "PAGADO" && f.dias > 30;
       if (tabActiva === "< 30 días") return f.estado !== "PAGADO" && f.dias <= 30;
       if (tabActiva === "Pagadas") return f.estado === "PAGADO";
@@ -156,91 +166,47 @@ export default function EstadoCuentaERP() {
           value={clienteFiltro}
           onChange={(e) => setClienteFiltro(e.target.value)}
         />
+        <input
+          type="date"
+          className="w-full mt-2 p-2 rounded text-black"
+          value={filtroFechaDesde}
+          onChange={(e) => setFiltroFechaDesde(e.target.value)}
+        />
+        <input
+          type="date"
+          className="w-full mt-2 p-2 rounded text-black"
+          value={filtroFechaHasta}
+          onChange={(e) => setFiltroFechaHasta(e.target.value)}
+        />
       </aside>
 
       <main className="flex-1 p-6 overflow-y-auto bg-gray-100">
-        {tabActiva === "Resumen" ? (
-          <div>
-            <h1 className="text-2xl font-bold mb-4">Facturación Total del Año</h1>
-            <p className="text-lg font-semibold mb-4">
-              Total {new Date().getFullYear()}: {formatCurrency(Object.values(resumenAnual).reduce((sum, v) => sum + v, 0))}
-            </p>
+        <div className="mb-4 text-lg font-semibold">Total: {formatCurrency(totalGeneral)}</div>
+        <div className="mb-4 text-green-600">Pagado: {formatCurrency(totalPagado)}</div>
+        <div className="mb-4 text-red-600">Adeudado: {formatCurrency(totalAdeudado)}</div>
 
-            <details className="mb-6">
-              <summary className="cursor-pointer font-semibold mb-2">📅 Ver detalle por mes</summary>
-              <ul className="mt-2">
-                {Object.entries(resumenAnual).sort().map(([mes, total]) => (
-                  <li key={mes}>{mes}: {formatCurrency(total)}</li>
-                ))}
-              </ul>
-            </details>
-
-            <details>
-              <summary className="cursor-pointer font-semibold mb-2">👤 Ver facturación por cliente</summary>
-              <div className="mt-2">
-                <input
-                  placeholder="Buscar cliente..."
-                  value={clienteFiltro}
-                  onChange={(e) => setClienteFiltro(e.target.value)}
-                  className="mb-4 p-2 rounded w-full max-w-md border"
-                />
-                <ul>
-                  {Object.entries(resumenClientes)
-                    .filter(([c]) => c.toLowerCase().includes(clienteFiltro.toLowerCase()))
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([cliente, total]) => (
-                      <li key={cliente}>{cliente}: {formatCurrency(total)}</li>
-                    ))}
-                </ul>
-              </div>
-            </details>
-          </div>
-        ) : (
-          <>
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold mb-2">Facturas - {tabActiva}</h1>
-              <p className="text-gray-700 font-medium">Total: {formatCurrency(totalGeneral)}</p>
-              <p className="text-green-700 font-medium">Pagadas: {formatCurrency(totalPagado)}</p>
-              <p className="text-red-700 font-medium">Adeudadas: {formatCurrency(totalAdeudado)}</p>
+        {facturasFiltradas.map((f) => (
+          <div key={f.id} className="bg-white shadow p-4 rounded mb-4 border border-gray-200">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              <div><strong>Fecha:</strong> {f.fecha}</div>
+              <div><strong>Factura:</strong> {f.nroFactura}</div>
+              <div><strong>Importe:</strong> {formatCurrency(f.importe)}</div>
+              <div><strong>Estado:</strong> {f.estado}</div>
+              <div><strong>Cliente:</strong> {f.cliente}</div>
+              <div><strong>Vencimiento:</strong> {f.vencimiento}</div>
+              {f.detalle && <div><strong>Detalle:</strong> {f.detalle}</div>}
+              {f.patente && <div><strong>Patente:</strong> {f.patente}</div>}
             </div>
-
-            <table className="min-w-full bg-white rounded shadow">
-              <thead className="bg-gray-200 text-gray-700">
-                <tr>
-                  <th className="p-2 text-left">Cliente</th>
-                  <th className="p-2 text-left">Factura</th>
-                  <th className="p-2 text-left">Fecha</th>
-                  <th className="p-2 text-left">Importe</th>
-                  <th className="p-2 text-left">Vencimiento</th>
-                  <th className="p-2 text-left">Estado</th>
-                  <th className="p-2 text-left"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {facturasFiltradas.map((factura) => (
-                  <tr key={factura.id} className="border-t">
-                    <td className="p-2">{factura.cliente}</td>
-                    <td className="p-2">{factura.nroFactura}</td>
-                    <td className="p-2">{factura.fecha}</td>
-                    <td className="p-2">{formatCurrency(factura.importe)}</td>
-                    <td className="p-2">{factura.vencimiento}</td>
-                    <td className="p-2">{factura.estado}</td>
-                    <td className="p-2">
-                      {factura.estado !== "PAGADO" && (
-                        <button
-                          onClick={() => marcarComoPagada(factura)}
-                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
-                        >
-                          Marcar como pagada
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
-        )}
+            {f.estado !== "PAGADO" && (
+              <button
+                className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                onClick={() => marcarComoPagada(f)}
+              >
+                Marcar como pagada
+              </button>
+            )}
+          </div>
+        ))}
       </main>
     </div>
   );
