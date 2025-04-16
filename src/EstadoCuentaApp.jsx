@@ -13,6 +13,14 @@ const TABS = [
   { name: "Resumen", icon: "📈" }
 ];
 
+function formatCurrency(num) {
+  return num.toLocaleString("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 2
+  });
+}
+
 export default function EstadoCuentaERP() {
   const [facturas, setFacturas] = useState([]);
   const [clienteFiltro, setClienteFiltro] = useState("");
@@ -155,16 +163,14 @@ export default function EstadoCuentaERP() {
           <div>
             <h1 className="text-2xl font-bold mb-4">Facturación Total del Año</h1>
             <p className="text-lg font-semibold mb-4">
-              Total {new Date().getFullYear()}: ${
-                Object.values(resumenAnual).reduce((sum, v) => sum + v, 0).toFixed(2)
-              }
+              Total {new Date().getFullYear()}: {formatCurrency(Object.values(resumenAnual).reduce((sum, v) => sum + v, 0))}
             </p>
 
             <details className="mb-6">
               <summary className="cursor-pointer font-semibold mb-2">📅 Ver detalle por mes</summary>
               <ul className="mt-2">
                 {Object.entries(resumenAnual).sort().map(([mes, total]) => (
-                  <li key={mes}>{mes}: ${total.toFixed(2)}</li>
+                  <li key={mes}>{mes}: {formatCurrency(total)}</li>
                 ))}
               </ul>
             </details>
@@ -183,7 +189,7 @@ export default function EstadoCuentaERP() {
                     .filter(([c]) => c.toLowerCase().includes(clienteFiltro.toLowerCase()))
                     .sort((a, b) => b[1] - a[1])
                     .map(([cliente, total]) => (
-                      <li key={cliente}>{cliente}: ${total.toFixed(2)}</li>
+                      <li key={cliente}>{cliente}: {formatCurrency(total)}</li>
                     ))}
                 </ul>
               </div>
@@ -193,9 +199,9 @@ export default function EstadoCuentaERP() {
           <>
             <div className="mb-6">
               <h1 className="text-2xl font-bold mb-2">Facturas - {tabActiva}</h1>
-              <p className="text-gray-700 font-medium">Total: ${totalGeneral.toFixed(2)}</p>
-              <p className="text-green-700 font-medium">Pagadas: ${totalPagado.toFixed(2)}</p>
-              <p className="text-red-700 font-medium">Adeudadas: ${totalAdeudado.toFixed(2)}</p>
+              <p className="text-gray-700 font-medium">Total: {formatCurrency(totalGeneral)}</p>
+              <p className="text-green-700 font-medium">Pagadas: {formatCurrency(totalPagado)}</p>
+              <p className="text-red-700 font-medium">Adeudadas: {formatCurrency(totalAdeudado)}</p>
             </div>
 
             <table className="min-w-full bg-white rounded shadow">
@@ -216,7 +222,7 @@ export default function EstadoCuentaERP() {
                     <td className="p-2">{factura.cliente}</td>
                     <td className="p-2">{factura.nroFactura}</td>
                     <td className="p-2">{factura.fecha}</td>
-                    <td className="p-2">${factura.importe.toFixed(2)}</td>
+                    <td className="p-2">{formatCurrency(factura.importe)}</td>
                     <td className="p-2">{factura.vencimiento}</td>
                     <td className="p-2">{factura.estado}</td>
                     <td className="p-2">
