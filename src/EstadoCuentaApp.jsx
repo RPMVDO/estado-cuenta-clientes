@@ -9,25 +9,16 @@ const TABS = [
   { name: "> 30 días", icon: "⏰" },
   { name: "< 30 días", icon: "🗓️" },
   { name: "Pagadas", icon: "✅" },
-  { name: "Adeudadas", icon: "⚠️" }
+  { name: "Adeudadas", icon: "⚠️" },
+  { name: "Resumen", icon: "📈" }
 ];
 
 export default function EstadoCuentaERP() {
   const [facturas, setFacturas] = useState([]);
   const [clienteFiltro, setClienteFiltro] = useState("");
   const [tabActiva, setTabActiva] = useState("Todas");
-  const [nuevaFactura, setNuevaFactura] = useState({
-    fecha: "",
-    nroFactura: "",
-    importe: "",
-    cliente: "",
-    condicion: "",
-    recibo: "",
-    vencimiento: "",
-    estado: "",
-    detalle: "",
-    patente: ""
-  });
+  const [resumenAnual, setResumenAnual] = useState({});
+  const [resumenClientes, setResumenClientes] = useState({});
 
   const formatearFecha = (fechaStr) => {
     if (!fechaStr) return "";
@@ -63,6 +54,7 @@ export default function EstadoCuentaERP() {
             return {
               id: index,
               fecha: formatearFecha(fechaRaw),
+              fechaRaw,
               nroFactura: row["FACTURA"] || "",
               importe: parseFloat((row["IMPORTE"] || "0").toString().replace(/[^0-9.-]+/g, "")),
               cliente,
@@ -81,6 +73,24 @@ export default function EstadoCuentaERP() {
         }).filter(Boolean);
 
         setFacturas(adaptadas);
+
+        // Resumen anual y por cliente
+        const resumenMensual = {};
+        const resumenCliente = {};
+
+        adaptadas.forEach(f => {
+          const fecha = new Date(f.fechaRaw);
+          if (isNaN(fecha)) return;
+          const anio = fecha.getFullYear();
+          const mes = fecha.getMonth() + 1;
+          const key = `${anio}-${String(mes).padStart(2, '0')}`;
+
+          resumenMensual[key] = (resumenMensual[key] || 0) + f.importe;
+          resumenCliente[f.cliente] = (resumenCliente[f.cliente] || 0) + f.importe;
+        });
+
+        setResumenAnual(resumenMensual);
+        setResumenClientes(resumenCliente);
       })
       .catch((err) => console.error("❌ Error en fetch de facturas:", err));
   }, []);
@@ -99,29 +109,22 @@ export default function EstadoCuentaERP() {
   const totalPagado = facturasFiltradas.filter((f) => f.estado === "PAGADO").reduce((acc, f) => acc + (f.importe || 0), 0);
   const totalAdeudado = facturasFiltradas.filter((f) => f.estado === "IMPAGO" || f.estado === "PENDIENTE").reduce((acc, f) => acc + (f.importe || 0), 0);
 
-  const handleAgregarFactura = () => {
-    fetch(GOOGLE_SHEET_API_URL, {
+  function marcarComoPagada(factura) {
+    fetch(API_PROXY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(nuevaFactura)
+      body: JSON.stringify({ nroFactura: factura.nroFactura })
     })
       .then((res) => res.text())
       .then(() => {
-        setFacturas((prev) => [...prev, nuevaFactura]);
-        setNuevaFactura({
-          fecha: "",
-          nroFactura: "",
-          importe: "",
-          cliente: "",
-          condicion: "",
-          recibo: "",
-          vencimiento: "",
-          estado: "",
-          detalle: "",
-          patente: ""
-        });
-      });
-  };
+        setFacturas((prev) =>
+          prev.map((f) =>
+            f.nroFactura === factura.nroFactura ? { ...f, estado: "PAGADO" } : f
+          )
+        );
+      })
+      .catch((err) => console.error("❌ Error al marcar como pagada:", err));
+  }
 
   return (
     <div className="flex h-screen">
@@ -145,87 +148,69 @@ export default function EstadoCuentaERP() {
       </aside>
 
       <main className="flex-1 p-6 overflow-y-auto bg-gray-100">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">Facturas - {tabActiva}</h1>
-          <p className="text-gray-700 font-medium">Total: ${totalGeneral.toFixed(2)}</p>
-          <p className="text-green-700 font-medium">Pagadas: ${totalPagado.toFixed(2)}</p>
-          <p className="text-red-700 font-medium">Adeudadas: ${totalAdeudado.toFixed(2)}</p>
-        </div>
-
-        <div className="mb-6 bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-bold mb-2">Cargar nueva factura</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            {Object.entries(nuevaFactura).map(([key, val]) => (
-              <input
-                key={key}
-                className="p-2 border rounded"
-                placeholder={key.charAt(0).toUpperCase() + key.slice(1)}
-                value={val}
-                onChange={(e) => setNuevaFactura({ ...nuevaFactura, [key]: e.target.value })}
-              />
-            ))}
+        {tabActiva === "Resumen" ? (
+          <div>
+            <h1 className="text-2xl font-bold mb-4">Resumen de Facturación</h1>
+            <h2 className="text-lg font-semibold mt-4 mb-2">Por Mes:</h2>
+            <ul className="mb-6">
+              {Object.entries(resumenAnual).sort().map(([mes, total]) => (
+                <li key={mes}>{mes}: ${total.toFixed(2)}</li>
+              ))}
+            </ul>
+            <h2 className="text-lg font-semibold mt-4 mb-2">Por Cliente:</h2>
+            <ul>
+              {Object.entries(resumenClientes).sort().map(([cliente, total]) => (
+                <li key={cliente}>{cliente}: ${total.toFixed(2)}</li>
+              ))}
+            </ul>
           </div>
-          <button
-            onClick={handleAgregarFactura}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-          >
-            Agregar Factura
-          </button>
-        </div>
+        ) : (
+          <>
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold mb-2">Facturas - {tabActiva}</h1>
+              <p className="text-gray-700 font-medium">Total: ${totalGeneral.toFixed(2)}</p>
+              <p className="text-green-700 font-medium">Pagadas: ${totalPagado.toFixed(2)}</p>
+              <p className="text-red-700 font-medium">Adeudadas: ${totalAdeudado.toFixed(2)}</p>
+            </div>
 
-        <table className="min-w-full bg-white rounded shadow">
-          <thead className="bg-gray-200 text-gray-700">
-            <tr>
-              <th className="p-2 text-left">Cliente</th>
-              <th className="p-2 text-left">Factura</th>
-              <th className="p-2 text-left">Fecha</th>
-              <th className="p-2 text-left">Importe</th>
-              <th className="p-2 text-left">Vencimiento</th>
-              <th className="p-2 text-left">Estado</th>
-              <th className="p-2 text-left"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {facturasFiltradas.map((factura) => (
-              <tr key={factura.id} className="border-t">
-                <td className="p-2">{factura.cliente}</td>
-                <td className="p-2">{factura.nroFactura}</td>
-                <td className="p-2">{factura.fecha}</td>
-                <td className="p-2">${factura.importe.toFixed(2)}</td>
-                <td className="p-2">{factura.vencimiento}</td>
-                <td className="p-2">{factura.estado}</td>
-                <td className="p-2">
-                  {factura.estado !== "PAGADO" && (
-                    <button
-                      onClick={() => marcarComoPagada(factura)}
-                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
-                    >
-                      Marcar como pagada
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            <table className="min-w-full bg-white rounded shadow">
+              <thead className="bg-gray-200 text-gray-700">
+                <tr>
+                  <th className="p-2 text-left">Cliente</th>
+                  <th className="p-2 text-left">Factura</th>
+                  <th className="p-2 text-left">Fecha</th>
+                  <th className="p-2 text-left">Importe</th>
+                  <th className="p-2 text-left">Vencimiento</th>
+                  <th className="p-2 text-left">Estado</th>
+                  <th className="p-2 text-left"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {facturasFiltradas.map((factura) => (
+                  <tr key={factura.id} className="border-t">
+                    <td className="p-2">{factura.cliente}</td>
+                    <td className="p-2">{factura.nroFactura}</td>
+                    <td className="p-2">{factura.fecha}</td>
+                    <td className="p-2">${factura.importe.toFixed(2)}</td>
+                    <td className="p-2">{factura.vencimiento}</td>
+                    <td className="p-2">{factura.estado}</td>
+                    <td className="p-2">
+                      {factura.estado !== "PAGADO" && (
+                        <button
+                          onClick={() => marcarComoPagada(factura)}
+                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
+                        >
+                          Marcar como pagada
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
       </main>
     </div>
   );
-
-  function marcarComoPagada(factura) {
-    fetch(API_PROXY_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nroFactura: factura.nroFactura })
-    })
-      .then((res) => res.text())
-      .then((msg) => {
-        setFacturas((prev) =>
-          prev.map((f) =>
-            f.nroFactura === factura.nroFactura ? { ...f, estado: "PAGADO" } : f
-          )
-        );
-      })
-      .catch((err) => console.error("❌ Error al marcar como pagada:", err));
-  }
 }
