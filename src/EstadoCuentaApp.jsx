@@ -74,9 +74,9 @@ export default function EstadoCuentaERP() {
 
         setFacturas(adaptadas);
 
-        // Resumen anual y por cliente
         const resumenMensual = {};
         const resumenCliente = {};
+        const currentYear = new Date().getFullYear();
 
         adaptadas.forEach(f => {
           const fecha = new Date(f.fechaRaw);
@@ -85,7 +85,10 @@ export default function EstadoCuentaERP() {
           const mes = fecha.getMonth() + 1;
           const key = `${anio}-${String(mes).padStart(2, '0')}`;
 
-          resumenMensual[key] = (resumenMensual[key] || 0) + f.importe;
+          if (anio === currentYear) {
+            resumenMensual[key] = (resumenMensual[key] || 0) + f.importe;
+          }
+
           resumenCliente[f.cliente] = (resumenCliente[f.cliente] || 0) + f.importe;
         });
 
@@ -150,19 +153,41 @@ export default function EstadoCuentaERP() {
       <main className="flex-1 p-6 overflow-y-auto bg-gray-100">
         {tabActiva === "Resumen" ? (
           <div>
-            <h1 className="text-2xl font-bold mb-4">Resumen de Facturación</h1>
-            <h2 className="text-lg font-semibold mt-4 mb-2">Por Mes:</h2>
-            <ul className="mb-6">
-              {Object.entries(resumenAnual).sort().map(([mes, total]) => (
-                <li key={mes}>{mes}: ${total.toFixed(2)}</li>
-              ))}
-            </ul>
-            <h2 className="text-lg font-semibold mt-4 mb-2">Por Cliente:</h2>
-            <ul>
-              {Object.entries(resumenClientes).sort().map(([cliente, total]) => (
-                <li key={cliente}>{cliente}: ${total.toFixed(2)}</li>
-              ))}
-            </ul>
+            <h1 className="text-2xl font-bold mb-4">Facturación Total del Año</h1>
+            <p className="text-lg font-semibold mb-4">
+              Total {new Date().getFullYear()}: ${
+                Object.values(resumenAnual).reduce((sum, v) => sum + v, 0).toFixed(2)
+              }
+            </p>
+
+            <details className="mb-6">
+              <summary className="cursor-pointer font-semibold mb-2">📅 Ver detalle por mes</summary>
+              <ul className="mt-2">
+                {Object.entries(resumenAnual).sort().map(([mes, total]) => (
+                  <li key={mes}>{mes}: ${total.toFixed(2)}</li>
+                ))}
+              </ul>
+            </details>
+
+            <details>
+              <summary className="cursor-pointer font-semibold mb-2">👤 Ver facturación por cliente</summary>
+              <div className="mt-2">
+                <input
+                  placeholder="Buscar cliente..."
+                  value={clienteFiltro}
+                  onChange={(e) => setClienteFiltro(e.target.value)}
+                  className="mb-4 p-2 rounded w-full max-w-md border"
+                />
+                <ul>
+                  {Object.entries(resumenClientes)
+                    .filter(([c]) => c.toLowerCase().includes(clienteFiltro.toLowerCase()))
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([cliente, total]) => (
+                      <li key={cliente}>{cliente}: ${total.toFixed(2)}</li>
+                    ))}
+                </ul>
+              </div>
+            </details>
           </div>
         ) : (
           <>
